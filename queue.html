@@ -486,6 +486,7 @@
   .public-view .toolbar,
   .public-view #import-panel,
   .public-view #add-form-panel,
+  .public-view #pw-change-card,
   .public-view .queue-table th:nth-child(6),
   .public-view .queue-table td:nth-child(6),
   .public-view .queue-table th:nth-child(7),
@@ -660,6 +661,26 @@
         <div class="add-form-error" id="add-error"></div>
       </div>
 
+      <!-- Password Change -->
+      <div id="pw-change-card" style="margin-top:0">
+      <div class="section-label" style="margin-top:28px;">🔐 Admin Password</div>
+      <div style="background:var(--bg2);border:1px solid rgba(255,79,110,.2);border-radius:8px;padding:18px 20px;margin-bottom:24px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--red);"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+          <div style="flex:1;min-width:160px;">
+            <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">New Password</label>
+            <input type="password" id="queue-new-pw" placeholder="New password" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;padding:10px 12px;border-radius:4px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Confirm Password</label>
+            <input type="password" id="queue-confirm-pw" placeholder="Confirm password" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:15px;padding:10px 12px;border-radius:4px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter') window.changeQueuePassword()">
+          </div>
+          <button onclick="window.changeQueuePassword()" style="padding:10px 20px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(255,79,110,.1);border:1px solid rgba(255,79,110,.4);color:var(--red);border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;" onmouseover="this.style.background='rgba(255,79,110,.2)'" onmouseout="this.style.background='rgba(255,79,110,.1)'">Save Password</button>
+        </div>
+        <div id="queue-pw-msg" style="font-size:11px;margin-top:8px;min-height:16px;font-family:'JetBrains Mono',monospace;"></div>
+      </div>
+      </div><!-- /pw-change-card -->
+
       <!-- Filter tabs -->
       <div class="filter-tabs">
         <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
@@ -716,94 +737,138 @@
 
 <div id="toast"></div>
 
-<script>
-// ─── Config ───────────────────────────────────────────────────────────────────
-const ADMIN_PASSWORD = 'guild2026'; // Change this!
-const STORAGE_KEY = 'guildAuctionQueue_v1';
+<script type="module">
+// ─── Firebase ─────────────────────────────────────────────────────────────────
+import { initializeApp }                                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyCsuRffnvtEBE04p3XkuXsmz9BrUaW8iSw",
+  authDomain:        "scream-rooc-auction-planner.firebaseapp.com",
+  projectId:         "scream-rooc-auction-planner",
+  storageBucket:     "scream-rooc-auction-planner.firebasestorage.app",
+  messagingSenderId: "333498953458",
+  appId:             "1:333498953458:web:a8fe3fdaf3fafee6922a6b"
+};
+
+const db       = getFirestore(initializeApp(firebaseConfig));
+const REF_PW   = doc(db, 'auction', 'password');   // shared with index.html
+const REF_QUEUE = doc(db, 'queue', 'data');
+
+const DEFAULT_PW = 'admin1234';
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let queue = [];       // [{uid, name, role, queueNum, done}]
+let queue  = [];
 let filter = 'all';
 let pendingDeleteUid = null;
-
-// ─── Persistence ─────────────────────────────────────────────────────────────
-function saveQueue() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(queue)); } catch(e) {}
-}
-function loadQueue() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) queue = JSON.parse(raw);
-  } catch(e) { queue = []; }
-}
-
-// ─── Public view init ─────────────────────────────────────────────────────────
 let isAdmin = false;
 
-(function initPublicView() {
-  document.getElementById('main-content').style.display = 'block';
-  document.body.classList.add('public-view');
-  loadQueue();
-  renderAll();
-})();
-
-// ─── Admin login modal ────────────────────────────────────────────────────────
-function openAdminLogin() {
-  document.getElementById('admin-login-modal').classList.add('open');
-  document.getElementById('admin-login-pw').focus();
+// ─── Password helpers ─────────────────────────────────────────────────────────
+async function getPassword() {
+  try {
+    const snap = await getDoc(REF_PW);
+    return snap.exists() ? snap.data().value : DEFAULT_PW;
+  } catch(e) { return DEFAULT_PW; }
 }
-function closeAdminLogin() {
+
+// ─── Firebase queue persistence ───────────────────────────────────────────────
+async function saveQueue() {
+  try {
+    await setDoc(REF_QUEUE, { members: queue });
+  } catch(e) {
+    console.error('saveQueue failed:', e);
+    toast('⚠ Save failed: ' + e.message, 'error');
+  }
+}
+
+// ─── Public view init + live listener ────────────────────────────────────────
+document.getElementById('main-content').style.display = 'block';
+document.body.classList.add('public-view');
+
+const hint = document.querySelector('.member-search-hint');
+if (hint) hint.innerHTML = '<span class="live-dot"></span>Connecting to cloud…';
+
+onSnapshot(REF_QUEUE, (snap) => {
+  if (snap.exists()) {
+    const data = snap.data();
+    queue = Array.isArray(data.members) ? data.members : [];
+  } else {
+    queue = [];
+  }
+  renderAll();
+  if (hint) hint.innerHTML = '<span class="live-dot"></span>Live · Search by UID number or Player ID like P1, P2 · Queue updates in real time';
+  if (hint) hint.style.color = '';
+}, (err) => {
+  if (hint) { hint.textContent = '⚠ Cloud connection failed — ' + err.message; hint.style.color = 'var(--red)'; }
+});
+
+// ─── Admin login ─────────────────────────────────────────────────────────────
+window.openAdminLogin = function() {
+  document.getElementById('admin-login-modal').classList.add('open');
+  setTimeout(() => document.getElementById('admin-login-pw').focus(), 80);
+};
+window.closeAdminLogin = function() {
   document.getElementById('admin-login-modal').classList.remove('open');
   document.getElementById('admin-login-pw').value = '';
   document.getElementById('admin-login-error').textContent = '';
-}
-function tryAdminLogin() {
-  const pw = document.getElementById('admin-login-pw').value;
-  if (pw === ADMIN_PASSWORD) {
+};
+window.tryAdminLogin = async function() {
+  const pw    = document.getElementById('admin-login-pw').value;
+  const saved = await getPassword();
+  if (pw === saved) {
     isAdmin = true;
-    closeAdminLogin();
-    // Switch to admin mode
+    window.closeAdminLogin();
     document.body.classList.remove('public-view');
-    // Update banner to show admin mode
-    document.getElementById('public-view-banner').style.background = 'rgba(255,79,110,0.07)';
-    document.getElementById('public-view-banner').style.borderColor = 'rgba(255,79,110,0.25)';
-    document.getElementById('public-view-banner').style.color = 'var(--red)';
+    document.getElementById('public-view-banner').style.cssText = `
+      background:rgba(255,79,110,0.07);border:1px solid rgba(255,79,110,0.25);
+      border-radius:8px;padding:12px 18px;margin-bottom:24px;
+      font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--red);
+      letter-spacing:1px;display:flex;align-items:center;gap:10px;
+    `;
     document.getElementById('public-view-banner').innerHTML = `
       <span style="font-size:16px">🔓</span>
       <span style="flex:1">ADMIN MODE — You can now manage the queue.</span>
-      <button onclick="exitAdminMode()" style="
-        background: none; border: 1px solid rgba(255,79,110,0.4); color: var(--red);
-        font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
-        padding: 4px 10px; border-radius: 4px; cursor: pointer; text-transform: uppercase;
-      ">Exit Admin</button>
+      <button onclick="window.exitAdminMode()" style="background:none;border:1px solid rgba(255,79,110,0.4);color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;">Exit Admin</button>
     `;
   } else {
     document.getElementById('admin-login-error').textContent = 'Incorrect password.';
     document.getElementById('admin-login-pw').value = '';
     document.getElementById('admin-login-pw').focus();
   }
-}
-function exitAdminMode() {
+};
+window.exitAdminMode = function() {
   isAdmin = false;
   document.body.classList.add('public-view');
-  // Restore banner
-  document.getElementById('public-view-banner').style.background = 'rgba(61,232,232,0.07)';
-  document.getElementById('public-view-banner').style.borderColor = 'rgba(61,232,232,0.25)';
-  document.getElementById('public-view-banner').style.color = 'var(--cyan)';
+  document.getElementById('public-view-banner').style.cssText = `
+    background:rgba(61,232,232,0.07);border:1px solid rgba(61,232,232,0.25);
+    border-radius:8px;padding:12px 18px;margin-bottom:24px;
+    font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);
+    letter-spacing:1px;display:flex;align-items:center;gap:10px;
+  `;
   document.getElementById('public-view-banner').innerHTML = `
     <span style="font-size:16px">👁</span>
     <span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
-    <button id="admin-login-btn" onclick="openAdminLogin()" style="
-      background: none; border: 1px solid var(--border); color: var(--muted);
-      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
-      padding: 4px 10px; border-radius: 4px; cursor: pointer; text-transform: uppercase; white-space: nowrap;
-    " onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
-       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">⚙ Admin</button>
+    <button onclick="window.openAdminLogin()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;white-space:nowrap;">⚙ Admin</button>
   `;
-}
+};
 
-// ─── Legacy tryGate (unused but kept for safety) ──────────────────────────────
-function tryGate() {}
+// ─── Change password (shared with index.html) ─────────────────────────────────
+window.changeQueuePassword = async function() {
+  const np  = document.getElementById('queue-new-pw').value.trim();
+  const cp  = document.getElementById('queue-confirm-pw').value.trim();
+  const msg = document.getElementById('queue-pw-msg');
+  if (!np) { msg.style.color='var(--red)'; msg.textContent='Password cannot be empty.'; return; }
+  if (np !== cp) { msg.style.color='var(--red)'; msg.textContent='Passwords do not match.'; return; }
+  try {
+    await setDoc(REF_PW, { value: np });
+    msg.style.color='var(--green)'; msg.textContent='✓ Password updated (applies to both pages).';
+    document.getElementById('queue-new-pw').value = '';
+    document.getElementById('queue-confirm-pw').value = '';
+    setTimeout(() => msg.textContent = '', 3500);
+  } catch(e) {
+    msg.style.color='var(--red)'; msg.textContent='✕ Save failed: ' + e.message;
+  }
+};
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
@@ -850,10 +915,10 @@ function renderTable() {
       <td><span class="q-status-pill ${m.done ? 'done' : 'waiting'}">${m.done ? '✓ Done' : 'Waiting'}</span></td>
       <td>
         <input type="checkbox" class="q-done-cb" ${m.done ? 'checked' : ''}
-          onchange="toggleDone('${esc(m.uid)}', this.checked)" title="Mark as done">
+          onchange="window.toggleDone('${esc(m.uid)}', this.checked)" title="Mark as done">
       </td>
       <td class="q-actions">
-        <button class="q-del-btn" onclick="openDeleteModal('${esc(m.uid)}', '${esc(m.name)}')" title="Remove">✕</button>
+        <button class="q-del-btn" onclick="window.openDeleteModal('${esc(m.uid)}', '${esc(m.name)}')" title="Remove">✕</button>
       </td>
     </tr>
   `).join('');
@@ -864,18 +929,17 @@ function esc(s) {
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
-function toggleDone(uid, checked) {
+window.toggleDone = function(uid, checked) {
   const m = queue.find(x => x.uid === uid);
   if (!m) return;
   m.done = checked;
   saveQueue();
   renderAll();
   toast(checked ? `✓ ${m.name} marked as done` : `↩ ${m.name} unmarked`, checked ? 'success' : '');
-}
+};
 
-function shuffleQueue() {
+window.shuffleQueue = function() {
   if (queue.length === 0) { toast('No members to shuffle', 'error'); return; }
-  // Fisher-Yates shuffle
   const arr = [...queue];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -886,17 +950,17 @@ function shuffleQueue() {
   saveQueue();
   renderAll();
   toast(`🎲 Random order assigned to ${queue.length} members!`, 'success');
-}
+};
 
 // ─── Import ───────────────────────────────────────────────────────────────────
-function toggleImport() {
+window.toggleImport = function() {
   const p = document.getElementById('import-panel');
   p.classList.toggle('open');
   document.getElementById('add-form-panel').classList.remove('open');
   if (p.classList.contains('open')) document.getElementById('import-textarea').focus();
-}
+};
 
-function doImport() {
+window.doImport = function() {
   const raw = document.getElementById('import-textarea').value.trim();
   const errEl = document.getElementById('import-error');
   errEl.textContent = '';
@@ -928,17 +992,17 @@ function doImport() {
   } else {
     errEl.textContent = `No new members added. ${skipped} duplicate(s) skipped.`;
   }
-}
+};
 
 // ─── Add single member ────────────────────────────────────────────────────────
-function toggleAddForm() {
+window.toggleAddForm = function() {
   const p = document.getElementById('add-form-panel');
   p.classList.toggle('open');
   document.getElementById('import-panel').classList.remove('open');
   if (p.classList.contains('open')) document.getElementById('add-uid').focus();
-}
+};
 
-function doAddMember() {
+window.doAddMember = function() {
   const uid  = document.getElementById('add-uid').value.trim();
   const name = document.getElementById('add-name').value.trim();
   const role = document.getElementById('add-role').value.trim() || 'Member';
@@ -959,60 +1023,55 @@ function doAddMember() {
   document.getElementById('add-role').value = '';
   document.getElementById('add-uid').focus();
   toast(`✓ ${name} added to queue`, 'success');
-}
+};
 
 // ─── Filter ───────────────────────────────────────────────────────────────────
-function setFilter(f, el) {
+window.setFilter = function(f, el) {
   filter = f;
   document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   renderTable();
-}
+};
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
-function openDeleteModal(uid, name) {
+window.openDeleteModal = function(uid, name) {
   pendingDeleteUid = uid;
   document.getElementById('delete-modal-msg').textContent = `Remove "${name}" (UID: ${uid}) from the queue?`;
   document.getElementById('delete-modal').classList.add('open');
-}
-function closeDeleteModal() {
+};
+window.closeDeleteModal = function() {
   pendingDeleteUid = null;
   document.getElementById('delete-modal').classList.remove('open');
-}
-function confirmDelete() {
+};
+window.confirmDelete = function() {
   if (!pendingDeleteUid) return;
   const m = queue.find(x => x.uid === pendingDeleteUid);
   queue = queue.filter(x => x.uid !== pendingDeleteUid);
   saveQueue();
   renderAll();
-  closeDeleteModal();
+  window.closeDeleteModal();
   if (m) toast(`Removed ${m.name}`, '');
-}
+};
 
 // ─── Reset ────────────────────────────────────────────────────────────────────
-function openResetModal()  { document.getElementById('reset-modal').classList.add('open'); }
-function closeResetModal() { document.getElementById('reset-modal').classList.remove('open'); }
-function doReset() {
+window.openResetModal  = function() { document.getElementById('reset-modal').classList.add('open'); };
+window.closeResetModal = function() { document.getElementById('reset-modal').classList.remove('open'); };
+window.doReset = function() {
   queue.forEach(m => m.done = false);
   saveQueue();
   renderAll();
-  closeResetModal();
+  window.closeResetModal();
   toast('↺ All done statuses cleared — ready for next round', 'success');
-}
+};
 
-// ─── Member search (public-style lookup) ─────────────────────────────────────
-function doMemberSearch() {
-  const q = document.getElementById('member-search-input').value.trim().toLowerCase();
+// ─── Member search ────────────────────────────────────────────────────────────
+window.doMemberSearch = function() {
+  const q  = document.getElementById('member-search-input').value.trim().toLowerCase();
   const el = document.getElementById('member-result');
   if (!q) { el.innerHTML = ''; return; }
 
-  // Match by UID exact, or by Player ID (P1 = queue position 1, etc.)
-  let m = null;
+  let m = queue.find(x => x.uid.toLowerCase() === q);
 
-  // Try UID match
-  m = queue.find(x => x.uid.toLowerCase() === q);
-
-  // Try player ID like P1, P2 — match by queueNum
   if (!m) {
     const pMatch = q.match(/^p(\d+)$/);
     if (pMatch) {
@@ -1021,7 +1080,6 @@ function doMemberSearch() {
     }
   }
 
-  // Partial name or uid
   if (!m) {
     m = queue.find(x =>
       x.uid.toLowerCase().includes(q) ||
@@ -1034,9 +1092,8 @@ function doMemberSearch() {
     return;
   }
 
-  // Count position among waiting members
-  const waitingList = queue.filter(x => !x.done);
-  const posInWaiting = waitingList.findIndex(x => x.uid === m.uid);
+  const waitingList   = queue.filter(x => !x.done);
+  const posInWaiting  = waitingList.findIndex(x => x.uid === m.uid);
 
   el.innerHTML = `
     <div class="mr-card">
@@ -1057,7 +1114,7 @@ function doMemberSearch() {
       </div>
     </div>
   `;
-}
+};
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let toastTimer;
@@ -1069,9 +1126,11 @@ function toast(msg, type='') {
   toastTimer = setTimeout(() => { el.className = ''; }, 3000);
 }
 
-// ─── Close modals on overlay click ───────────────────────────────────────────
-document.getElementById('reset-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeResetModal(); });
-document.getElementById('delete-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDeleteModal(); });
+// ─── Modal overlay close on bg click ─────────────────────────────────────────
+document.getElementById('reset-modal').addEventListener('click',  e => { if (e.target === e.currentTarget) window.closeResetModal(); });
+document.getElementById('delete-modal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeDeleteModal(); });
+document.getElementById('admin-login-modal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeAdminLogin(); });
+
 </script>
 </body>
 </html>
