@@ -1027,6 +1027,7 @@
 
   <!-- Admin toggle -->
   <div class="admin-toggle-bar">
+    <a class="admin-toggle-btn" href="queue.html" style="text-decoration:none;margin-right:8px">👥 Queue</a>
     <button class="admin-toggle-btn" id="admin-toggle-btn" onclick="openAdminModal()">⚙ Admin</button>
   </div>
 
@@ -1280,8 +1281,8 @@ function unlockAdmin() {
   document.getElementById('admin-panel').classList.add('open');
   document.getElementById('admin-toggle-btn').textContent = '🔓 Lock Admin';
   document.getElementById('admin-toggle-btn').classList.add('active');
-  // Admins always bypass the player lock overlay
-  document.getElementById('lock-overlay').classList.remove('active');
+  // Admins bypass the lock — restore search in case it was disabled
+  applyLockToPlayers(false);
   loadConfigToForm();
   const saved = window._cachedAssignments;
   if (saved) renderSavedAssignments(saved);
@@ -1897,13 +1898,23 @@ function updateLockUI(locked) {
 }
 
 function applyLockToPlayers(locked) {
-  // Admins bypass the lock
+  // Admins bypass the lock entirely
   if (adminUnlocked) return;
-  const overlay = document.getElementById('lock-overlay');
+  // Instead of blocking the whole page, just disable the search input & button
+  const searchInput = document.getElementById('player-search-input');
+  const searchBtn   = document.querySelector('.btn-search');
+  const hint        = document.querySelector('.search-hint');
   if (locked) {
-    overlay.classList.add('active');
+    if (searchInput) { searchInput.disabled = true; searchInput.value = ''; searchInput.placeholder = 'Search locked by admin'; }
+    if (searchBtn)   { searchBtn.disabled = true; searchBtn.style.opacity = '0.4'; searchBtn.style.cursor = 'not-allowed'; }
+    if (hint)        { hint.textContent = '🔒 Search is currently locked. Please wait for the Guild Admin to open access.'; hint.style.color = 'var(--red)'; }
+    // Clear any previous result
+    const result = document.getElementById('player-result');
+    if (result) result.innerHTML = '';
   } else {
-    overlay.classList.remove('active');
+    if (searchInput) { searchInput.disabled = false; searchInput.placeholder = 'Type your player ID (e.g. P1, F2)'; }
+    if (searchBtn)   { searchBtn.disabled = false; searchBtn.style.opacity = ''; searchBtn.style.cursor = ''; }
+    if (hint)        { hint.style.color = ''; }
   }
 }
 
