@@ -155,10 +155,11 @@
     display: flex;
     gap: 12px;
     align-items: stretch;
-    max-width: 520px;
+    max-width: 640px;
   }
   .search-input-wrap {
     flex: 1;
+    min-width: 0;
     position: relative;
   }
   .search-icon {
@@ -175,7 +176,7 @@
     border: 1px solid var(--border);
     color: var(--text);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 25px;
+    font-size: 20px;
     padding: 14px 16px 14px 42px;
     border-radius: 6px;
     outline: none;
@@ -183,13 +184,13 @@
     text-transform: uppercase;
     letter-spacing: 2px;
   }
-  #player-search-input::placeholder { color: var(--muted); font-size: 17px; letter-spacing: 1px; text-transform: none; }
+  #player-search-input::placeholder { color: var(--muted); font-size: 15px; letter-spacing: 1px; text-transform: none; }
   #player-search-input:focus {
     border-color: var(--gold);
     box-shadow: 0 0 20px rgba(200,149,42,0.15);
   }
   .btn-search {
-    padding: 14px 28px;
+    padding: 14px 32px;
     font-family: 'Playfair Display', serif;
     font-size: 16px;
     font-weight: 700;
@@ -201,6 +202,7 @@
     transition: transform .15s, box-shadow .15s;
     box-shadow: 0 0 20px rgba(200,149,42,0.2);
     white-space: nowrap;
+    flex-shrink: 0;
   }
   .btn-search:hover { transform: translateY(-2px); box-shadow: 0 0 32px rgba(245,200,66,0.35); }
 
@@ -294,19 +296,54 @@
   .bid-row:hover { border-color: rgba(200,149,42,0.4); }
 
   .bid-page-label {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    white-space: nowrap;
+    min-width: 90px;
+  }
+  .bid-page-label .lbl {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .bid-page-label .num {
     font-family: 'Playfair Display', serif;
-    font-size: 21px;
-    font-weight: 700;
+    font-size: 26px;
+    font-weight: 900;
     color: var(--gold);
-    white-space: nowrap;
-    min-width: 80px;
+    line-height: 1;
   }
+
   .bid-slots {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 20px;
-    color: var(--cyan);
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
     white-space: nowrap;
   }
+  .bid-slots .lbl {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .bid-slots .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cyan);
+    line-height: 1;
+    background: rgba(61,232,232,0.08);
+    border: 1px solid rgba(61,232,232,0.2);
+    border-radius: 5px;
+    padding: 1px 8px;
+  }
+
   .bid-arrow {
     color: var(--muted);
     font-size: 18px;
@@ -1414,14 +1451,13 @@ window.doSearch = function() {
     for (const pg of sortedPages) {
       const pageItems = byPage[pg].sort((a,b) => a.slot - b.slot);
       const slotNums = pageItems.map(i => i.slot).join(',');
-      const slotStr = `Slot ${slotNums}`;
       const tagsHtml = pageItems.map(i =>
         `<span class="item-tag ${TYPE_TAG[i.type]}">${TYPE_LABEL[i.type]}</span>`
       ).join('');
       const pgGold = pageItems.reduce((s,i) => s + TYPE_PRICE[i.type], 0);
       bidRowsHtml += `<div class="bid-row">
-        <div class="bid-page-label">Page ${pg}</div>
-        <div class="bid-slots">${slotStr}</div>
+        <div class="bid-page-label"><span class="lbl">Page</span><span class="num">${pg}</span></div>
+        <div class="bid-slots"><span class="lbl">Slot</span><span class="num">${slotNums}</span></div>
         <div class="bid-arrow">→</div>
         <div class="bid-items">${tagsHtml}</div>
         <div class="bid-gold"><span class="gold-coin"></span> ${pgGold.toLocaleString()}</div>
