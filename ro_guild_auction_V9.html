@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RO Classic — Guild Auction Planner V9</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0c14;
+    --bg2:       #0f1220;
+    --bg3:       #161a2e;
+    --border:    #2a3060;
+    --gold:      #c8952a;
+    --gold2:     #f5c842;
+    --cyan:      #3de8e8;
+    --purple:    #9b6dff;
+    --red:       #ff4f6e;
+    --green:     #3dff9b;
+    --text:      #d0d8f0;
+    --muted:     #5a6488;
+    --album:     #b06dff;
+    --fragment:  #ff8c2a;
+    --white-f:   #a8d8ff;
+    --black-f:   #ff4f6e;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(42,48,96,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42,48,96,0.18) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* === Header === */
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+    position: relative;
+  }
+  header::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold2), transparent);
+  }
+  .title-sub {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(22px, 5vw, 40px);
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 50%, var(--gold) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 2px;
+    line-height: 1.1;
+  }
+  .header-desc {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  /* === Admin toggle link === */
+  .admin-toggle-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 24px;
+  }
+  .admin-toggle-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .2s;
+    text-transform: uppercase;
+  }
+  .admin-toggle-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .admin-toggle-btn.active { border-color: var(--red); color: var(--red); }
+
+  /* === Player Search === */
+  #player-search-section {
+    margin-bottom: 40px;
+  }
+  .search-label {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .search-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .search-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    max-width: 520px;
+  }
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .search-icon {
+    position: absolute;
+    left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    pointer-events: none;
+  }
+  #player-search-input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 20px;
+    padding: 14px 16px 14px 42px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  #player-search-input::placeholder { color: var(--muted); font-size: 15px; letter-spacing: 1px; text-transform: none; }
+  #player-search-input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(200,149,42,0.15);
+  }
+  .btn-search {
+    padding: 14px 28px;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+    border: none; border-radius: 6px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 0 20px rgba(200,149,42,0.2);
+    white-space: nowrap;
+  }
+  .btn-search:hover { transform: translateY(-2px); box-shadow: 0 0 32px rgba(245,200,66,0.35); }
+
+  .search-hint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* === Player Result Card === */
+  #player-result {
+    margin-top: 24px;
+    display: none;
+  }
+
+  .result-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    animation: fadeIn .3s ease forwards;
+  }
+  .result-card-header {
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .result-player-id {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--gold2);
+    line-height: 1;
+  }
+  .result-player-id.fillin { color: var(--green); }
+  .result-role-badge {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+  .badge-main   { background: rgba(61,232,232,.1); border: 1px solid rgba(61,232,232,.3); color: var(--cyan); }
+  .badge-fillin { background: rgba(61,255,155,.1); border: 1px solid rgba(61,255,155,.3); color: var(--green); }
+
+  .result-gold {
+    margin-left: auto;
+    text-align: right;
+  }
+  .result-gold-amount {
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    color: var(--gold2);
+  }
+  .result-gold-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .result-body { padding: 20px 24px; }
+
+  .result-no-items {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  /* Bid instruction rows */
+  .bid-rows { display: flex; flex-direction: column; gap: 10px; }
+  .bid-row {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    transition: border-color .2s;
+  }
+  .bid-row:hover { border-color: rgba(200,149,42,0.4); }
+
+  .bid-page-label {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+    min-width: 70px;
+  }
+  .bid-slots {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--cyan);
+    white-space: nowrap;
+  }
+  .bid-arrow {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .bid-items { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bid-gold {
+    margin-left: auto;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    color: var(--gold2);
+    white-space: nowrap;
+  }
+
+  /* Summary chips */
+  .result-totals {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .result-totals-label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    font-family: 'Share Tech Mono', monospace;
+    text-transform: uppercase;
+  }
+
+  .not-found-card {
+    background: rgba(255,79,110,.06);
+    border: 1px solid rgba(255,79,110,.25);
+    border-radius: 8px;
+    padding: 20px 24px;
+    color: #ff8fa3;
+    font-size: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: .5px;
+    margin-top: 20px;
+    animation: fadeIn .3s ease;
+  }
+
+  .no-config-card {
+    background: rgba(200,149,42,.06);
+    border: 1px solid rgba(200,149,42,.25);
+    border-radius: 8px;
+    padding: 20px 24px;
+    color: var(--gold);
+    font-size: 14px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: .5px;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.8;
+  }
+
+  /* === Password modal === */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(5,7,18,.85);
+    backdrop-filter: blur(4px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 36px 40px;
+    width: 100%; max-width: 380px;
+    position: relative;
+    animation: fadeIn .25s ease;
+  }
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    color: var(--gold);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    text-align: center;
+  }
+  .modal-sub {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+    margin-bottom: 24px;
+  }
+  .modal-input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    outline: none;
+    letter-spacing: 3px;
+    text-align: center;
+    transition: border-color .2s;
+    margin-bottom: 14px;
+  }
+  .modal-input:focus { border-color: var(--gold); }
+  .modal-error {
+    color: var(--red);
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    text-align: center;
+    min-height: 18px;
+    margin-bottom: 10px;
+  }
+  .modal-btn {
+    width: 100%;
+    padding: 12px;
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--gold), var(--gold2));
+    border: none; border-radius: 6px;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .modal-btn:hover { opacity: .88; }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px;
+    background: none; border: none;
+    color: var(--muted); font-size: 18px;
+    cursor: pointer; transition: color .15s;
+  }
+  .modal-close:hover { color: var(--text); }
+
+  /* === Admin Panel === */
+  #admin-panel { display: none; }
+  #admin-panel.open { display: block; }
+
+  .admin-banner {
+    background: rgba(255,79,110,.07);
+    border: 1px solid rgba(255,79,110,.25);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: #ff8fa3;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* === Section title === */
+  .sec-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sec-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* === Config grid === */
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .card.album::before    { background: var(--album); }
+  .card.fragment::before { background: var(--fragment); }
+  .card.white-f::before  { background: var(--white-f); }
+  .card.black-f::before  { background: var(--black-f); }
+  .card.fill-in::before  { background: var(--green); }
+  .card.fill-in .card-label { color: var(--green); }
+
+  .card-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card.album .card-label    { color: var(--album); }
+  .card.fragment .card-label { color: var(--fragment); }
+  .card.white-f .card-label  { color: var(--white-f); }
+  .card.black-f .card-label  { color: var(--black-f); }
+  .card.neutral .card-label  { color: var(--cyan); }
+
+  .input-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .input-row label { font-size: 12px; color: var(--muted); width: 54px; flex-shrink: 0; }
+  input[type=number], input[type=password] {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    width: 80px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input[type=number]:focus, input[type=password]:focus { border-color: var(--gold); }
+  input[type=number].limit-input { width: 65px; }
+
+  /* password change card */
+  .card.admin-pw { border-color: rgba(255,79,110,.2); }
+  .card.admin-pw::before { background: var(--red); }
+  .card.admin-pw .card-label { color: var(--red); }
+  .pw-input-full {
+    width: 100% !important;
+    margin-bottom: 8px;
+  }
+  .btn-save-pw {
+    padding: 7px 16px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    background: rgba(255,79,110,.1);
+    border: 1px solid rgba(255,79,110,.4);
+    color: var(--red);
+    border-radius: 4px; cursor: pointer;
+    transition: all .15s;
+    width: 100%;
+  }
+  .btn-save-pw:hover { background: rgba(255,79,110,.2); }
+
+  /* === Generate button === */
+  .btn-generate {
+    display: block; width: 100%; max-width: 360px; margin: 0 auto 36px;
+    padding: 14px 30px;
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--bg);
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+    border: none; border-radius: 6px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 0 24px rgba(200,149,42,0.25);
+  }
+  .btn-generate:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(245,200,66,0.4); }
+  .btn-generate:active { transform: translateY(0); }
+
+  /* === Summary bar === */
+  .warning {
+    background: rgba(255,79,110,.08);
+    border: 1px solid rgba(255,79,110,.3);
+    color: #ff8fa3;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .info-bar {
+    background: rgba(61,232,232,.06);
+    border: 1px solid rgba(61,232,232,.2);
+    color: var(--cyan);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 12px;
+    margin-bottom: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: .5px;
+  }
+
+  /* === Tabs === */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px; cursor: pointer;
+    transition: all .15s;
+  }
+  .tab-btn.active { background: var(--bg3); border-color: var(--gold); color: var(--gold); }
+  .tab-btn:hover:not(.active) { border-color: var(--muted); color: var(--text); }
+
+  #results { display: none; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* === Player table === */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 12px; text-align: left;
+    background: var(--bg2);
+  }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(42,48,96,0.5); vertical-align: top; }
+  tr:hover td { background: rgba(22,26,46,0.6); }
+
+  .player-num {
+    font-family: 'Cinzel', serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--gold2); white-space: nowrap;
+  }
+
+  .assignment-list { display: flex; flex-direction: column; gap: 4px; }
+  .assignment-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg3); border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 13px; font-family: 'Share Tech Mono', monospace;
+  }
+  .page-badge {
+    font-size: 10px;
+    background: rgba(200,149,42,0.15); color: var(--gold);
+    border: 1px solid rgba(200,149,42,0.3);
+    border-radius: 3px; padding: 1px 5px; white-space: nowrap;
+  }
+  .item-tag {
+    font-size: 11px; padding: 2px 6px; border-radius: 3px;
+    font-family: 'Rajdhani', sans-serif; font-weight: 600; letter-spacing: .5px;
+  }
+  .tag-album  { background: rgba(176,109,255,.15); color: var(--album); }
+  .tag-frag   { background: rgba(255,140,42,.15);  color: var(--fragment); }
+  .tag-whitef { background: rgba(168,216,255,.15); color: var(--white-f); }
+  .tag-blackf { background: rgba(255,79,110,.15);  color: var(--black-f); }
+
+  .total-cell { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--muted); }
+  .total-cell span { margin-right: 6px; }
+
+  /* === Page view === */
+  .pages-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .page-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .page-header {
+    background: var(--bg3); border-bottom: 1px solid var(--border);
+    padding: 8px 14px; font-family: 'Cinzel', serif; font-size: 12px;
+    color: var(--gold); letter-spacing: 2px;
+  }
+  .page-items { padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+  .page-item-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0; border-bottom: 1px solid rgba(42,48,96,0.4); font-size: 13px;
+  }
+  .page-item-row:last-child { border-bottom: none; }
+  .item-slot { display: flex; align-items: center; gap: 6px; }
+  .slot-num { font-family: 'Share Tech Mono', monospace; color: var(--muted); font-size: 11px; width: 18px; }
+  .bidder-info { font-family: 'Share Tech Mono', monospace; font-size: 12px; }
+  .bidder-players { color: var(--cyan); }
+  .bidder-fillin  { color: var(--green) !important; }
+  .no-bidder { color: var(--muted); font-style: italic; }
+
+  .fillin-section { margin-top: 28px; }
+  .player-num.fillin { color: var(--green) !important; }
+  .fillin-badge {
+    font-size: 10px;
+    background: rgba(61,255,155,.12); color: var(--green);
+    border: 1px solid rgba(61,255,155,.3); border-radius: 3px;
+    padding: 1px 6px; font-family: 'Share Tech Mono', monospace; margin-left: 4px;
+  }
+
+  /* === Export buttons === */
+  .export-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .btn-export {
+    padding: 8px 18px;
+    font-family: 'Rajdhani', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    border-radius: 4px; border: 1px solid; cursor: pointer; transition: all .15s;
+  }
+  .btn-export.csv   { background: rgba(61,232,232,.08); border-color: var(--cyan); color: var(--cyan); }
+  .btn-export.csv:hover   { background: rgba(61,232,232,.18); }
+  .btn-export.print { background: rgba(200,149,42,.08); border-color: var(--gold); color: var(--gold); }
+  .btn-export.print:hover { background: rgba(200,149,42,.18); }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media print {
+    body { background: #fff !important; color: #111 !important; }
+    body::before { display:none; }
+    .config-grid, .btn-generate, .tabs, .export-bar, .warning, .info-bar,
+    #player-search-section, .admin-toggle-bar, .admin-banner { display:none !important; }
+    #results { display: block !important; }
+    .tab-panel { display: block !important; }
+    #tab-pages { page-break-before: always; }
+    table { font-size: 12px; }
+    th { background: #eee !important; color: #333 !important; }
+    td { border-color: #ccc !important; }
+    .player-num { color: #6600cc !important; }
+    .page-card { border: 1px solid #ccc !important; background: #fafafa !important; break-inside: avoid; }
+    .page-header { background: #eee !important; color: #333 !important; }
+    .assignment-item { background: #f5f5f5 !important; }
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .animate-in { animation: fadeIn .35s ease forwards; }
+
+  @media (max-width: 520px) {
+    .search-row { flex-direction: column; }
+    .btn-search { width: 100%; }
+    .result-gold { margin-left: 0; margin-top: 8px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-sub">⚔ Guild Management Tool</div>
+    <h1>AUCTION BIDDING PLANNER</h1>
+    <div class="header-desc">Ragnarok Origin Classic · Guild League Rewards Distribution</div>
+  </header>
+
+  <!-- Admin toggle -->
+  <div class="admin-toggle-bar">
+    <button class="admin-toggle-btn" id="admin-toggle-btn" onclick="openAdminModal()">⚙ Admin</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       PLAYER SEARCH (visible to everyone)
+  ══════════════════════════════════════════ -->
+  <div id="player-search-section">
+    <div class="search-label">🔍 Find My Assignments</div>
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <span class="search-icon">▶</span>
+        <input
+          type="text"
+          id="player-search-input"
+          placeholder="Type your player ID (e.g. P1, F2)"
+          maxlength="6"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter') doSearch()"
+        >
+      </div>
+      <button class="btn-search" onclick="doSearch()">SEARCH</button>
+    </div>
+    <div class="search-hint">Enter P# for main players · F# for fill-in players</div>
+
+    <div id="player-result"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       ADMIN PANEL (hidden until unlocked)
+  ══════════════════════════════════════════ -->
+  <div id="admin-panel">
+    <div class="admin-banner">🔒 Admin Mode Active — Changes are saved and visible to all players</div>
+
+    <div class="sec-title">Reward Configuration</div>
+    <div class="config-grid">
+      <div class="card album">
+        <div class="card-label">🃏 Card Albums</div>
+        <div class="input-row"><label>Total</label><input type="number" id="total-album" value="34" min="0" onchange="autoSave()"></div>
+        <div class="input-row"><label>Limit</label><input type="number" id="limit-album" value="2" min="1" class="limit-input" onchange="autoSave()"> <span style="font-size:11px;color:var(--muted)">per player</span></div>
+      </div>
+      <div class="card fragment">
+        <div class="card-label">💎 Fragment Packs</div>
+        <div class="input-row"><label>Total</label><input type="number" id="total-frag" value="17" min="0" onchange="autoSave()"></div>
+        <div class="input-row"><label>Limit</label><input type="number" id="limit-frag" value="2" min="1" class="limit-input" onchange="autoSave()"> <span style="font-size:11px;color:var(--muted)">per player</span></div>
+      </div>
+      <div class="card white-f">
+        <div class="card-label">🪶 White Feathers</div>
+        <div class="input-row"><label>Total</label><input type="number" id="total-wf" value="150" min="0" onchange="autoSave()"></div>
+        <div class="input-row"><label>Limit</label><input type="number" id="limit-wf" value="7" min="1" class="limit-input" onchange="autoSave()"> <span style="font-size:11px;color:var(--muted)">per player</span></div>
+      </div>
+      <div class="card black-f">
+        <div class="card-label">🪶 Black Feathers</div>
+        <div class="input-row"><label>Total</label><input type="number" id="total-bf" value="210" min="0" onchange="autoSave()"></div>
+        <div class="input-row"><label>Limit</label><input type="number" id="limit-bf" value="10" min="1" class="limit-input" onchange="autoSave()"> <span style="font-size:11px;color:var(--muted)">per player</span></div>
+      </div>
+      <div class="card neutral">
+        <div class="card-label">👥 Players</div>
+        <div class="input-row"><label>Count</label><input type="number" id="num-players" value="17" min="1" max="200" onchange="autoSave()"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Items per page: 4 (fixed order)</div>
+      </div>
+      <div class="card fill-in">
+        <div class="card-label">🔁 Fill-in Players</div>
+        <div class="input-row"><label>Count</label><input type="number" id="num-fillin" value="0" min="0" max="200" onchange="autoSave()"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Buy leftover slots beyond limits.<br>Auto-minimises number needed.</div>
+      </div>
+      <div class="card admin-pw">
+        <div class="card-label">🔐 Admin Password</div>
+        <input type="password" id="new-pw" class="pw-input-full" placeholder="New password" style="width:100%;margin-bottom:8px;">
+        <input type="password" id="confirm-pw" class="pw-input-full" placeholder="Confirm password" style="width:100%;margin-bottom:10px;">
+        <button class="btn-save-pw" onclick="changePassword()">Save Password</button>
+        <div id="pw-msg" style="font-size:11px;margin-top:6px;min-height:16px;font-family:'Share Tech Mono',monospace;"></div>
+      </div>
+    </div>
+
+    <button class="btn-generate" onclick="generate()">⚔ GENERATE & SAVE ASSIGNMENTS</button>
+
+    <div id="warning" class="warning"></div>
+
+    <!-- RESULTS -->
+    <div id="results">
+      <div id="info-bar" class="info-bar"></div>
+      <div class="export-bar">
+        <button class="btn-export csv" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn-export print" onclick="window.print()">🖨 Print / Save PDF</button>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('players', this)">By Player</button>
+        <button class="tab-btn" onclick="switchTab('fillin', this)">Fill-in Players</button>
+        <button class="tab-btn" onclick="switchTab('pages', this)">By Page</button>
+      </div>
+      <div id="tab-players" class="tab-panel active">
+        <table id="player-table">
+          <thead><tr>
+            <th style="width:90px">Player</th>
+            <th>Assigned Items (Page · Slot)</th>
+            <th style="width:160px">Totals</th>
+            <th style="width:120px">Total Gold</th>
+          </tr></thead>
+          <tbody id="player-tbody"></tbody>
+        </table>
+      </div>
+      <div id="tab-fillin" class="tab-panel">
+        <div id="fillin-info" class="info-bar" style="margin-bottom:16px;"></div>
+        <table id="fillin-table">
+          <thead><tr>
+            <th style="width:120px">Fill-in Player</th>
+            <th>Overflow Slots (Page · Slot)</th>
+            <th style="width:160px">Totals</th>
+            <th style="width:120px">Total Gold</th>
+          </tr></thead>
+          <tbody id="fillin-tbody"></tbody>
+        </table>
+      </div>
+      <div id="tab-pages" class="tab-panel">
+        <div class="pages-grid" id="pages-grid"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">⚔ Admin Access</div>
+    <div class="modal-sub">Enter password to unlock configuration</div>
+    <input
+      type="password"
+      class="modal-input"
+      id="modal-pw-input"
+      placeholder="••••••••"
+      onkeydown="if(event.key==='Enter') submitPassword()"
+    >
+    <div class="modal-error" id="modal-error"></div>
+    <button class="modal-btn" onclick="submitPassword()">UNLOCK</button>
+  </div>
+</div>
+
+<script type="module">
+// ─────────────────────────────────────────────
+//  Firebase SDK (CDN module imports)
+// ─────────────────────────────────────────────
+import { initializeApp }                              from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyCsuRffnvtEBE04p3XkuXsmz9BrUaW8iSw",
+  authDomain:        "scream-rooc-auction-planner.firebaseapp.com",
+  projectId:         "scream-rooc-auction-planner",
+  storageBucket:     "scream-rooc-auction-planner.firebasestorage.app",
+  messagingSenderId: "333498953458",
+  appId:             "1:333498953458:web:a8fe3fdaf3fafee6922a6b"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db    = getFirestore(fbApp);
+
+// Firestore document refs (single-doc-per-collection approach)
+const REF_CONFIG  = doc(db, 'auction', 'config');
+const REF_ASSIGN  = doc(db, 'auction', 'assignments');
+const REF_PW      = doc(db, 'auction', 'password');
+
+// ─────────────────────────────────────────────
+//  Constants
+// ─────────────────────────────────────────────
+const TYPES      = ['album','frag','wf','bf'];
+const TYPE_LABEL = { album:'Card Album', frag:'Fragment Pack', wf:'White Feather', bf:'Black Feather' };
+const TYPE_TAG   = { album:'tag-album',  frag:'tag-frag',     wf:'tag-whitef',    bf:'tag-blackf'  };
+const TYPE_EMOJI = { album:'🃏', frag:'💎', wf:'🪶 W', bf:'🪶 B' };
+const TYPE_PRICE = { album:800, frag:1000, wf:80, bf:80 };
+
+const DEFAULT_PW = 'admin1234';
+
+// expose globals so non-module onclick="" handlers can reach them
+window._db         = db;
+window._REF_CONFIG = REF_CONFIG;
+window._REF_ASSIGN = REF_ASSIGN;
+window._REF_PW     = REF_PW;
+
+// ─────────────────────────────────────────────
+//  Password helpers  (Firestore-backed)
+// ─────────────────────────────────────────────
+async function getPassword() {
+  try {
+    const snap = await getDoc(REF_PW);
+    return snap.exists() ? snap.data().value : DEFAULT_PW;
+  } catch(e) { return DEFAULT_PW; }
+}
+
+let adminUnlocked = false;
+
+window.openAdminModal = function() {
+  if (adminUnlocked) { lockAdmin(); return; }
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-pw-input').value = '';
+  document.getElementById('modal-error').textContent = '';
+  setTimeout(() => document.getElementById('modal-pw-input').focus(), 100);
+};
+
+window.closeModal = function() {
+  document.getElementById('modal-overlay').classList.remove('open');
+};
+
+window.closeModalOnBg = function(e) {
+  if (e.target === document.getElementById('modal-overlay')) window.closeModal();
+};
+
+window.submitPassword = async function() {
+  const val = document.getElementById('modal-pw-input').value;
+  const pw  = await getPassword();
+  if (val === pw) {
+    window.closeModal();
+    unlockAdmin();
+  } else {
+    document.getElementById('modal-error').textContent = '✕ Incorrect password';
+    document.getElementById('modal-pw-input').value = '';
+    document.getElementById('modal-pw-input').focus();
+  }
+};
+
+function unlockAdmin() {
+  adminUnlocked = true;
+  document.getElementById('admin-panel').classList.add('open');
+  document.getElementById('admin-toggle-btn').textContent = '🔓 Lock Admin';
+  document.getElementById('admin-toggle-btn').classList.add('active');
+  loadConfigToForm();
+  const saved = window._cachedAssignments;
+  if (saved) renderSavedAssignments(saved);
+}
+
+function lockAdmin() {
+  adminUnlocked = false;
+  document.getElementById('admin-panel').classList.remove('open');
+  document.getElementById('admin-toggle-btn').textContent = '⚙ Admin';
+  document.getElementById('admin-toggle-btn').classList.remove('active');
+}
+
+window.changePassword = async function() {
+  const np  = document.getElementById('new-pw').value.trim();
+  const cp  = document.getElementById('confirm-pw').value.trim();
+  const msg = document.getElementById('pw-msg');
+  if (!np) { msg.style.color='var(--red)'; msg.textContent='Password cannot be empty.'; return; }
+  if (np !== cp) { msg.style.color='var(--red)'; msg.textContent='Passwords do not match.'; return; }
+  try {
+    await setDoc(REF_PW, { value: np });
+    msg.style.color='var(--green)'; msg.textContent='✓ Password updated.';
+    document.getElementById('new-pw').value = '';
+    document.getElementById('confirm-pw').value = '';
+    setTimeout(() => msg.textContent = '', 3000);
+  } catch(e) {
+    msg.style.color='var(--red)'; msg.textContent='✕ Save failed: ' + e.message;
+  }
+};
+
+// ─────────────────────────────────────────────
+//  Config persistence  (Firestore-backed)
+// ─────────────────────────────────────────────
+function getConfig() {
+  return {
+    totals: {
+      album: +document.getElementById('total-album').value || 0,
+      frag:  +document.getElementById('total-frag').value  || 0,
+      wf:    +document.getElementById('total-wf').value    || 0,
+      bf:    +document.getElementById('total-bf').value    || 0,
+    },
+    limits: {
+      album: +document.getElementById('limit-album').value || 1,
+      frag:  +document.getElementById('limit-frag').value  || 1,
+      wf:    +document.getElementById('limit-wf').value    || 1,
+      bf:    +document.getElementById('limit-bf').value    || 1,
+    },
+    players: +document.getElementById('num-players').value || 1,
+    fillin:  +document.getElementById('num-fillin').value  || 0,
+  };
+}
+
+async function saveConfig(cfg) {
+  await setDoc(REF_CONFIG, cfg);
+}
+
+async function loadConfigToForm() {
+  try {
+    const snap = await getDoc(REF_CONFIG);
+    if (!snap.exists()) return;
+    const cfg = snap.data();
+    document.getElementById('total-album').value  = cfg.totals.album;
+    document.getElementById('total-frag').value   = cfg.totals.frag;
+    document.getElementById('total-wf').value     = cfg.totals.wf;
+    document.getElementById('total-bf').value     = cfg.totals.bf;
+    document.getElementById('limit-album').value  = cfg.limits.album;
+    document.getElementById('limit-frag').value   = cfg.limits.frag;
+    document.getElementById('limit-wf').value     = cfg.limits.wf;
+    document.getElementById('limit-bf').value     = cfg.limits.bf;
+    document.getElementById('num-players').value  = cfg.players;
+    document.getElementById('num-fillin').value   = cfg.fillin;
+  } catch(e) { console.error('loadConfigToForm', e); }
+}
+
+window.autoSave = function() {
+  saveConfig(getConfig()).catch(console.error);
+};
+
+async function getSavedAssignments() {
+  try {
+    const snap = await getDoc(REF_ASSIGN);
+    return snap.exists() ? snap.data() : null;
+  } catch(e) { return null; }
+}
+
+async function saveAssignments(data) {
+  await setDoc(REF_ASSIGN, data);
+}
+
+// ─────────────────────────────────────────────
+//  Core logic
+// ─────────────────────────────────────────────
+function buildItemList(totals) {
+  const list = [];
+  for (const t of TYPES)
+    for (let i = 0; i < totals[t]; i++) list.push(t);
+  return list;
+}
+
+function distribute(items, numPlayers, limits) {
+  const assignments = new Array(items.length).fill(null);
+  const typeItemIdx = { album:[], frag:[], wf:[], bf:[] };
+  items.forEach((t, idx) => typeItemIdx[t].push(idx));
+  for (const t of TYPES) {
+    const idxList = typeItemIdx[t];
+    const lim = limits[t];
+    for (let i = 0; i < idxList.length; i++) {
+      const player = Math.floor(i / lim);
+      if (player < numPlayers) assignments[idxList[i]] = player;
+    }
+  }
+  return assignments;
+}
+
+function distributeFillin(items, assignments, numFillin, limits) {
+  const overflowByType = { album:[], frag:[], wf:[], bf:[] };
+  items.forEach((t, idx) => { if (assignments[idx] === null) overflowByType[t].push(idx); });
+  const fillinAssign = new Array(items.length).fill(null);
+  if (numFillin <= 0) return { fillinAssign, needed: 0 };
+  const given = {};
+  for (let fp = 0; fp < numFillin; fp++)
+    given[fp] = { album:0, frag:0, wf:0, bf:0 };
+  for (const t of TYPES) {
+    const idxList = overflowByType[t];
+    if (!idxList.length) continue;
+    const lim = limits[t]; let cursor = 0;
+    for (let fp = 0; fp < numFillin && cursor < idxList.length; fp++) {
+      const remaining = idxList.length - cursor;
+      const playersLeft = numFillin - fp;
+      const myShare = Math.min(lim, Math.ceil(remaining / playersLeft));
+      for (let k = 0; k < myShare && cursor < idxList.length; k++) {
+        fillinAssign[idxList[cursor]] = fp; given[fp][t]++; cursor++;
+      }
+    }
+  }
+  let needed = 0;
+  for (let fp = 0; fp < numFillin; fp++)
+    if (Object.values(given[fp]).some(v => v > 0)) needed = fp + 1;
+  return { fillinAssign, needed };
+}
+
+function itemLocation(globalIdx) {
+  return { page: Math.floor(globalIdx / 4) + 1, slot: (globalIdx % 4) + 1 };
+}
+
+// ─────────────────────────────────────────────
+//  Player search
+// ─────────────────────────────────────────────
+window.doSearch = function() {
+  const raw = document.getElementById('player-search-input').value.trim().toUpperCase();
+  const container = document.getElementById('player-result');
+
+  if (!raw) { container.innerHTML = ''; container.style.display='none'; return; }
+
+  // Use realtime-cached assignments
+  const saved = window._cachedAssignments;
+  if (!saved) {
+    container.style.display = 'block';
+    container.innerHTML = `<div class="no-config-card">
+      ⚠️ No assignments have been generated yet.<br>
+      <span style="color:var(--muted)">Please ask your guild admin to set up and generate the auction plan.</span>
+    </div>`;
+    return;
+  }
+
+  const { playerData, fillinData, cfg } = saved;
+
+  // Parse input: P# or F#
+  let isFillin = false; let idx = -1;
+  if (/^P(\d+)$/.test(raw)) {
+    idx = parseInt(raw.slice(1)) - 1; isFillin = false;
+  } else if (/^F(\d+)$/.test(raw)) {
+    idx = parseInt(raw.slice(1)) - 1; isFillin = true;
+  } else {
+    container.style.display = 'block';
+    container.innerHTML = `<div class="not-found-card">⚠ Invalid format. Use P1–P${cfg.players} for main players or F1–F${cfg.fillin||'?'} for fill-in players.</div>`;
+    return;
+  }
+
+  const data    = isFillin ? fillinData : playerData;
+  const maxIdx  = isFillin ? cfg.fillin : cfg.players;
+  const label   = isFillin ? 'F' : 'P';
+  const pd      = data[idx];
+
+  if (idx < 0 || idx >= maxIdx || !pd) {
+    container.style.display = 'block';
+    container.innerHTML = `<div class="not-found-card">⚠ ${raw} not found. Valid range: ${label}1–${label}${maxIdx}.</div>`;
+    return;
+  }
+
+  // Build result card
+  const totalGold = TYPES.reduce((s, t) => s + pd.totals[t] * TYPE_PRICE[t], 0);
+  const roleBadge = isFillin
+    ? `<span class="result-role-badge badge-fillin">Fill-in Player</span>`
+    : `<span class="result-role-badge badge-main">Main Player</span>`;
+
+  // Group items by page
+  const byPage = {};
+  for (const item of pd.items) {
+    if (!byPage[item.page]) byPage[item.page] = [];
+    byPage[item.page].push(item);
+  }
+  const sortedPages = Object.keys(byPage).map(Number).sort((a,b)=>a-b);
+
+  let bidRowsHtml = '';
+  if (pd.items.length === 0) {
+    bidRowsHtml = `<div class="result-no-items">No items assigned to this player.</div>`;
+  } else {
+    bidRowsHtml = '<div class="bid-rows">';
+    for (const pg of sortedPages) {
+      const pageItems = byPage[pg].sort((a,b) => a.slot - b.slot);
+      const slotStr = pageItems.map(i => `Slot ${i.slot}`).join(', ');
+      const tagsHtml = pageItems.map(i =>
+        `<span class="item-tag ${TYPE_TAG[i.type]}">${TYPE_LABEL[i.type]}</span>`
+      ).join('');
+      const pgGold = pageItems.reduce((s,i) => s + TYPE_PRICE[i.type], 0);
+      bidRowsHtml += `<div class="bid-row">
+        <div class="bid-page-label">Page ${pg}</div>
+        <div class="bid-slots">${slotStr}</div>
+        <div class="bid-arrow">→</div>
+        <div class="bid-items">${tagsHtml}</div>
+        <div class="bid-gold">⚜ ${pgGold.toLocaleString()}</div>
+      </div>`;
+    }
+    bidRowsHtml += '</div>';
+  }
+
+  // Totals chips
+  let totChips = '';
+  for (const t of TYPES) {
+    if (pd.totals[t] > 0)
+      totChips += `<span class="item-tag ${TYPE_TAG[t]}">${TYPE_EMOJI[t]} ×${pd.totals[t]}</span>`;
+  }
+  if (!totChips) totChips = '<span style="color:var(--muted);font-size:13px;">No items</span>';
+
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="result-card">
+      <div class="result-card-header">
+        <div class="result-player-id ${isFillin ? 'fillin' : ''}">${raw}</div>
+        ${roleBadge}
+        <div class="result-gold">
+          <div class="result-gold-amount">⚜ ${totalGold.toLocaleString()}</div>
+          <div class="result-gold-label">total gold to spend</div>
+        </div>
+      </div>
+      <div class="result-body">
+        ${bidRowsHtml}
+        <div class="result-totals">
+          <span class="result-totals-label">Items:</span>
+          ${totChips}
+        </div>
+      </div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
+//  Generate & save  (Firestore-backed)
+// ─────────────────────────────────────────────
+window.generate = async function() {
+  const cfg  = getConfig();
+  const warn = document.getElementById('warning');
+  warn.style.display = 'none';
+
+  const items      = buildItemList(cfg.totals);
+  const totalItems = items.length;
+  const totalPages = Math.ceil(totalItems / 4);
+
+  if (totalItems === 0) {
+    warn.textContent = '⚠ No items configured. Please enter reward quantities.';
+    warn.style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+    return;
+  }
+
+  const assignments = distribute(items, cfg.players, cfg.limits);
+  const overflowCount = assignments.filter(a => a === null).length;
+  const { fillinAssign, needed } = distributeFillin(items, assignments, cfg.fillin, cfg.limits);
+
+  const stillUnhandled = cfg.fillin > 0
+    ? fillinAssign.filter((a,i) => a === null && assignments[i] === null).length
+    : overflowCount;
+
+  if (stillUnhandled > 0) {
+    warn.innerHTML = `⚠ <strong>${stillUnhandled} item(s)</strong> still unassigned — add more fill-in players or increase limits.`;
+    warn.style.display = 'block';
+  } else if (overflowCount > 0 && cfg.fillin > 0) {
+    warn.innerHTML = `ℹ <strong>${overflowCount} overflow item(s)</strong> assigned to ${needed} fill-in player(s).`;
+    warn.style.display = 'block';
+    warn.style.background = 'rgba(61,255,155,.06)';
+    warn.style.borderColor = 'rgba(61,255,155,.3)';
+    warn.style.color = 'var(--green)';
+  } else if (overflowCount > 0) {
+    warn.innerHTML = `⚠ <strong>${overflowCount} overflow item(s)</strong> beyond player limits. Set Fill-in Players count above to assign them.`;
+    warn.style.display = 'block';
+  }
+
+  // Build playerData & fillinData objects (serialisable)
+  const playerData = {};
+  for (let p = 0; p < cfg.players; p++)
+    playerData[p] = { items: [], totals: { album:0, frag:0, wf:0, bf:0 } };
+  items.forEach((t, idx) => {
+    const p = assignments[idx];
+    if (p !== null) {
+      playerData[p].items.push({ type: t, ...itemLocation(idx), globalIdx: idx });
+      playerData[p].totals[t]++;
+    }
+  });
+
+  const fillinData = {};
+  for (let p = 0; p < cfg.fillin; p++)
+    fillinData[p] = { items: [], totals: { album:0, frag:0, wf:0, bf:0 } };
+  items.forEach((t, idx) => {
+    const fp = fillinAssign[idx];
+    if (fp !== null && fp !== undefined) {
+      fillinData[fp].items.push({ type: t, ...itemLocation(idx), globalIdx: idx });
+      fillinData[fp].totals[t]++;
+    }
+  });
+
+  // Persist to Firestore (both config + assignments)
+  const saveData = { playerData, fillinData, cfg, items, assignments, fillinAssign };
+  try {
+    await Promise.all([
+      saveConfig(cfg),
+      saveAssignments(saveData)
+    ]);
+    // show brief save confirmation
+    const btn = document.querySelector('.btn-generate');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Saved to Cloud!';
+    btn.style.background = 'linear-gradient(135deg,var(--green),#00cc66)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2200);
+  } catch(e) {
+    warn.innerHTML = `✕ Firebase save failed: ${e.message}`;
+    warn.style.display = 'block';
+  }
+
+  // Store for export
+  window._lastPlayerData   = playerData;
+  window._lastFillinData   = fillinData;
+  window._lastCfg          = cfg;
+  window._lastItems        = items;
+  window._lastAssignments  = assignments;
+  window._lastFillinAssign = fillinAssign;
+
+  renderAdminTables(saveData);
+};
+
+function renderSavedAssignments(saved) {
+  const { playerData, fillinData, cfg, items, assignments, fillinAssign } = saved;
+  window._lastPlayerData   = playerData;
+  window._lastFillinData   = fillinData;
+  window._lastCfg          = cfg;
+  window._lastItems        = items;
+  window._lastAssignments  = assignments;
+  window._lastFillinAssign = fillinAssign;
+  renderAdminTables(saved);
+}
+
+function renderAdminTables({ playerData, fillinData, cfg, items, assignments, fillinAssign }) {
+  const totalItems = items.length;
+  const totalPages = Math.ceil(totalItems / 4);
+  const overflowCount = assignments.filter(a => a === null).length;
+
+  // Info bar
+  const needed = (() => {
+    let n = 0;
+    for (let fp = 0; fp < cfg.fillin; fp++)
+      if (fillinData[fp] && fillinData[fp].items.length > 0) n = fp + 1;
+    return n;
+  })();
+
+  document.getElementById('info-bar').innerHTML =
+    `📋 Total: ${totalItems} items · ${totalPages} pages · ${cfg.players} main + ${cfg.fillin} fill-in players &nbsp;|&nbsp; ` +
+    `🃏 ${cfg.totals.album} &nbsp; 💎 ${cfg.totals.frag} &nbsp; 🪶W ${cfg.totals.wf} &nbsp; 🪶B ${cfg.totals.bf}`;
+
+  buildPlayerRows(playerData, cfg.players, 'P', '', document.getElementById('player-tbody'));
+
+  const fillinInfo = document.getElementById('fillin-info');
+  if (cfg.fillin === 0) {
+    fillinInfo.innerHTML = '💡 Set Fill-in Players count in config to assign overflow slots.';
+    document.getElementById('fillin-tbody').innerHTML =
+      '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px;font-style:italic;">No fill-in players configured.</td></tr>';
+  } else if (overflowCount === 0) {
+    fillinInfo.innerHTML = '✅ No overflow — all items fit within main player limits.';
+    document.getElementById('fillin-tbody').innerHTML =
+      '<tr><td colspan="4" style="color:var(--green);text-align:center;padding:20px;">No overflow items.</td></tr>';
+  } else {
+    fillinInfo.innerHTML = `🔁 ${overflowCount} overflow items distributed across ${needed} fill-in player(s) (of ${cfg.fillin} configured)`;
+    buildPlayerRows(fillinData, cfg.fillin, 'F', 'fillin', document.getElementById('fillin-tbody'));
+  }
+
+  // Page grid
+  const pagesGrid = document.getElementById('pages-grid');
+  pagesGrid.innerHTML = '';
+  const ownerLabel = {};
+  items.forEach((t, idx) => {
+    if (assignments[idx] !== null) ownerLabel[idx] = { label: `P${assignments[idx]+1}`, cls: 'bidder-players' };
+    else if (fillinAssign[idx] !== null && fillinAssign[idx] !== undefined)
+      ownerLabel[idx] = { label: `F${fillinAssign[idx]+1}`, cls: 'bidder-fillin' };
+    else ownerLabel[idx] = null;
+  });
+
+  for (let pg = 1; pg <= totalPages; pg++) {
+    const card = document.createElement('div');
+    card.className = 'page-card';
+    let html = `<div class="page-header">PAGE ${pg}</div><div class="page-items">`;
+    for (let slot = 1; slot <= 4; slot++) {
+      const gIdx = (pg - 1) * 4 + (slot - 1);
+      if (gIdx >= items.length) {
+        html += `<div class="page-item-row"><div class="item-slot"><span class="slot-num">${slot}</span><span style="color:var(--muted);font-size:12px;">—</span></div><span style="color:var(--muted);font-size:11px;">empty</span></div>`;
+        continue;
+      }
+      const t   = items[gIdx];
+      const own = ownerLabel[gIdx];
+      const bidderHtml = own
+        ? `<span class="${own.cls}">${own.label}</span>`
+        : `<span class="no-bidder">unassigned</span>`;
+      html += `<div class="page-item-row">
+        <div class="item-slot"><span class="slot-num">${slot}</span><span class="item-tag ${TYPE_TAG[t]}">${TYPE_LABEL[t]}</span></div>
+        <div class="bidder-info">${bidderHtml}</div></div>`;
+    }
+    html += '</div>';
+    card.innerHTML = html;
+    pagesGrid.appendChild(card);
+  }
+
+  const res = document.getElementById('results');
+  res.style.display = 'block';
+  res.classList.remove('animate-in');
+  void res.offsetWidth;
+  res.classList.add('animate-in');
+}
+
+function buildPlayerRows(playerData, numPlayers, label, cssClass, tbody) {
+  tbody.innerHTML = '';
+  for (let p = 0; p < numPlayers; p++) {
+    const pd = playerData[p];
+    if (!pd) continue;
+    const byPage = {};
+    for (const item of pd.items) {
+      if (!byPage[item.page]) byPage[item.page] = [];
+      byPage[item.page].push(item);
+    }
+    const sortedPages = Object.keys(byPage).map(Number).sort((a,b)=>a-b);
+    let assignHtml = '<div class="assignment-list">';
+    if (pd.items.length === 0) {
+      assignHtml += '<span style="color:var(--muted);font-size:12px;font-style:italic;">No items assigned</span>';
+    } else {
+      for (const pg of sortedPages) {
+        const pageItems = byPage[pg].sort((a,b) => a.slot - b.slot);
+        const slotStr   = pageItems.map(i => `S${i.slot}`).join(', ');
+        const tagsHtml  = pageItems.map(i =>
+          `<span class="item-tag ${TYPE_TAG[i.type]}">${TYPE_LABEL[i.type]}</span>`).join('');
+        assignHtml += `<div class="assignment-item">
+          <span class="page-badge">Page ${pg} · ${slotStr}</span>${tagsHtml}</div>`;
+      }
+    }
+    assignHtml += '</div>';
+
+    let totalGold = 0;
+    let totHtml   = '<div class="total-cell">';
+    for (const t of TYPES) {
+      if (pd.totals[t] > 0) {
+        totalGold += pd.totals[t] * TYPE_PRICE[t];
+        totHtml += `<span class="item-tag ${TYPE_TAG[t]}" style="margin-right:4px;display:inline-block;margin-bottom:3px;">${TYPE_EMOJI[t]} ×${pd.totals[t]}</span>`;
+      }
+    }
+    if (Object.values(pd.totals).every(v => v === 0)) totHtml += '<span style="color:var(--muted)">—</span>';
+    totHtml += '</div>';
+
+    const goldHtml = totalGold > 0
+      ? `<span style="font-family:'Share Tech Mono',monospace;font-size:14px;color:var(--gold2);font-weight:700;">⚜ ${totalGold.toLocaleString()}</span><span style="font-size:11px;color:var(--muted);margin-left:3px;">gold</span>`
+      : `<span style="color:var(--muted)">—</span>`;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="player-num ${cssClass}">${label}${p+1}</span></td>
+      <td>${assignHtml}</td>
+      <td>${totHtml}</td>
+      <td>${goldHtml}</td>`;
+    tbody.appendChild(tr);
+  }
+}
+
+window.switchTab = function(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+};
+
+// ─────────────────────────────────────────────
+//  CSV Export (unchanged from V7)
+// ─────────────────────────────────────────────
+window.exportCSV = function exportCSV() {
+  const playerData = window._lastPlayerData;
+  const fillinData = window._lastFillinData;
+  const cfg        = window._lastCfg;
+  if (!playerData) return;
+
+  const lines = [];
+  const q   = s => `"${String(s).replace(/"/g,'""')}"`;
+  const row = cols => lines.push(cols.map(q).join(','));
+  const blank = () => lines.push('');
+  const section = title => { blank(); row([title]); };
+
+  row(['GUILD AUCTION ASSIGNMENT PLAN']);
+  row(['Generated', new Date().toLocaleString()]);
+  blank();
+  row(['REWARDS SUMMARY','','','']);
+  row(['Item','Total','Limit / Player','Price (gold)']);
+  row(['Card Album',    cfg.totals.album, cfg.limits.album, 800]);
+  row(['Fragment Pack', cfg.totals.frag,  cfg.limits.frag,  1000]);
+  row(['White Feather', cfg.totals.wf,    cfg.limits.wf,    80]);
+  row(['Black Feather', cfg.totals.bf,    cfg.limits.bf,    80]);
+  blank();
+  row(['Main Players', cfg.players, 'Fill-in Players', cfg.fillin]);
+
+  function writePlayerSection(data, count, label, role) {
+    section(`${role.toUpperCase()} PLAYERS`);
+    row(['Player','Role','Page','Slots','Item','Qty','Gold']);
+    let grandTotal = 0;
+    for (let p = 0; p < count; p++) {
+      const pd = data[p]; if (!pd) continue;
+      const gold = TYPES.reduce((sum, t) => sum + pd.totals[t] * TYPE_PRICE[t], 0);
+      grandTotal += gold;
+      const byPage = {};
+      for (const item of pd.items) {
+        if (!byPage[item.page]) byPage[item.page] = [];
+        byPage[item.page].push(item);
+      }
+      const sortedPages = Object.keys(byPage).map(Number).sort((a,b)=>a-b);
+      if (sortedPages.length === 0) { row([`${label}${p+1}`, role, 'No items', '', '', '', 0]); continue; }
+      sortedPages.forEach((pg, i) => {
+        const pageItems = byPage[pg].sort((a,b) => a.slot - b.slot);
+        const groups = [];
+        for (const item of pageItems) {
+          const last = groups[groups.length - 1];
+          if (last && last.type === item.type) last.slots.push(item.slot);
+          else groups.push({ type: item.type, slots: [item.slot] });
+        }
+        groups.forEach((grp, j) => {
+          const slotStr  = grp.slots.map(s => `S${s}`).join(', ');
+          const qty      = grp.slots.length;
+          const itemGold = qty * TYPE_PRICE[grp.type];
+          const pCol     = (i === 0 && j === 0) ? `${label}${p+1}` : '';
+          const rCol     = (i === 0 && j === 0) ? role : '';
+          const pgCol    = j === 0 ? `Page ${pg}` : '';
+          row([pCol, rCol, pgCol, slotStr, TYPE_LABEL[grp.type], qty, itemGold]);
+        });
+      });
+      row(['', '', '', 'TOTAL', `${gold.toLocaleString()} gold`, '', '']);
+      blank();
+    }
+    row(['', '', '', 'SECTION TOTAL', `${grandTotal.toLocaleString()} gold`, '', '']);
+  }
+
+  writePlayerSection(playerData, cfg.players, 'P', 'Main');
+  writePlayerSection(fillinData, cfg.fillin,  'F', 'Fill-in');
+
+  const allGold = [...Array(cfg.players)].reduce((s,_,p) =>
+    s + TYPES.reduce((gs,t) => gs + (playerData[p]?.totals[t]||0)*TYPE_PRICE[t], 0), 0)
+  + [...Array(cfg.fillin)].reduce((s,_,fp) =>
+    s + TYPES.reduce((gs,t) => gs + (fillinData[fp]?.totals[t]||0)*TYPE_PRICE[t], 0), 0);
+
+  blank();
+  row(['GRAND TOTAL GOLD', `${allGold.toLocaleString()} gold`]);
+
+  const csv  = lines.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'guild_auction_assignments.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────
+//  On load: subscribe to Firestore for live updates
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // Show a subtle loading indicator in the search hint
+  const hint = document.querySelector('.search-hint');
+  hint.textContent = '⏳ Connecting to cloud…';
+
+  // Realtime listener — fires immediately on load and on every future change
+  onSnapshot(REF_ASSIGN, (snap) => {
+    if (snap.exists()) {
+      window._cachedAssignments = snap.data();
+      hint.textContent = '✅ Live · Enter P# for main players · F# for fill-in players';
+      hint.style.color = 'var(--green)';
+      // If admin is open, refresh the tables live
+      if (adminUnlocked) renderSavedAssignments(window._cachedAssignments);
+    } else {
+      window._cachedAssignments = null;
+      hint.textContent = 'Enter P# for main players · F# for fill-in players';
+      hint.style.color = '';
+    }
+  }, (err) => {
+    hint.textContent = '⚠ Cloud connection failed — ' + err.message;
+    hint.style.color = 'var(--red)';
+  });
+});
+</script>
+</body>
+</html>
