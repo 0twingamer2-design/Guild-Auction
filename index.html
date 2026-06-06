@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RO Classic — Guild Auction Planner V9</title>
+<title>RO Classic — Guild Auction Planner V10</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -697,14 +697,224 @@
   @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
   .animate-in { animation: fadeIn .35s ease forwards; }
 
-  @media (max-width: 520px) {
-    .search-row { flex-direction: column; }
-    .btn-search { width: 100%; }
-    .result-gold { margin-left: 0; margin-top: 8px; }
+  /* === Last Updated Bar === */
+  .last-updated-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(200,149,42,.06);
+    border: 1px solid rgba(200,149,42,.2);
+    border-radius: 6px;
+    padding: 9px 14px;
+    margin-bottom: 20px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    flex-wrap: wrap;
   }
+  .last-updated-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    flex-shrink: 0;
+    animation: pulse-dot 2s infinite;
+  }
+  .last-updated-dot.stale { background: var(--gold); box-shadow: 0 0 6px var(--gold); }
+  .last-updated-dot.old   { background: var(--red);  box-shadow: 0 0 6px var(--red); }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; } 50% { opacity: .4; }
+  }
+  .last-updated-label { color: var(--muted); }
+  .last-updated-time  { color: var(--gold); font-weight: 700; }
+  .last-updated-age   { color: var(--muted); font-size: 11px; }
+
+  /* === Access Lock Overlay === */
+  .lock-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(5,7,18,.92);
+    backdrop-filter: blur(6px);
+    align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    padding: 24px;
+  }
+  .lock-overlay.active { display: flex; }
+  .lock-overlay-icon { font-size: 48px; line-height: 1; }
+  .lock-overlay-title {
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+  .lock-overlay-msg {
+    color: var(--muted);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    max-width: 320px;
+    line-height: 1.7;
+  }
+
+  /* === Admin lock control === */
+  .lock-control-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(155,109,255,.07);
+    border: 1px solid rgba(155,109,255,.25);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .lock-control-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--purple);
+    letter-spacing: 1px;
+    flex: 1;
+    min-width: 160px;
+  }
+  .lock-toggle-btn {
+    padding: 7px 20px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    border-radius: 4px; cursor: pointer;
+    transition: all .15s;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+  .lock-toggle-btn.unlocked {
+    background: rgba(61,255,155,.08);
+    border-color: var(--green); color: var(--green);
+  }
+  .lock-toggle-btn.unlocked:hover { background: rgba(61,255,155,.18); }
+  .lock-toggle-btn.locked {
+    background: rgba(255,79,110,.08);
+    border-color: var(--red); color: var(--red);
+  }
+  .lock-toggle-btn.locked:hover { background: rgba(255,79,110,.18); }
+
+  /* =============================================
+     MOBILE OPTIMISATION
+  ============================================= */
+  @media (max-width: 600px) {
+    .wrap { padding: 0 12px 48px; }
+
+    /* Header */
+    header { padding: 24px 0 20px; margin-bottom: 20px; }
+    h1 { font-size: 22px; letter-spacing: 1px; }
+    .title-sub { font-size: 10px; letter-spacing: 2px; }
+    .header-desc { font-size: 11px; }
+
+    /* Admin toggle */
+    .admin-toggle-bar { margin-bottom: 16px; }
+
+    /* Search */
+    .search-row { flex-direction: column; gap: 8px; }
+    .btn-search { width: 100%; padding: 13px; }
+    #player-search-input { font-size: 18px; padding: 13px 14px 13px 38px; }
+    .search-hint { font-size: 11px; }
+
+    /* Result card */
+    .result-card-header { padding: 14px 16px; gap: 10px; }
+    .result-player-id { font-size: 22px; }
+    .result-gold { margin-left: 0; margin-top: 4px; width: 100%; }
+    .result-gold-amount { font-size: 18px; }
+    .result-body { padding: 14px 16px; }
+    .bid-row { padding: 10px 12px; gap: 8px; }
+    .bid-page-label { font-size: 13px; min-width: 60px; }
+    .bid-slots { font-size: 12px; }
+    .bid-gold { font-size: 12px; margin-left: 0; width: 100%; text-align: right; }
+
+    /* Last updated */
+    .last-updated-bar { font-size: 11px; padding: 8px 12px; }
+
+    /* Config grid — single column */
+    .config-grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .card { padding: 14px 14px; }
+    .card.admin-pw { grid-column: 1 / -1; }
+    .card-label { font-size: 10px; }
+    input[type=number] { width: 70px; font-size: 13px; }
+    input[type=number].limit-input { width: 58px; }
+
+    /* Generate button */
+    .btn-generate { font-size: 14px; padding: 13px 20px; max-width: 100%; }
+
+    /* Tabs */
+    .tabs { gap: 4px; }
+    .tab-btn { padding: 7px 12px; font-size: 12px; flex: 1; text-align: center; }
+
+    /* Tables */
+    table { font-size: 12px; }
+    th { font-size: 10px; padding: 8px 8px; }
+    td { padding: 8px 8px; }
+    .player-num { font-size: 13px; }
+    .assignment-item { padding: 3px 6px; font-size: 11px; }
+    .page-badge { font-size: 9px; }
+    .item-tag { font-size: 10px; padding: 1px 5px; }
+
+    /* Pages grid */
+    .pages-grid { grid-template-columns: 1fr; gap: 10px; }
+
+    /* Export bar */
+    .export-bar { gap: 8px; }
+    .btn-export { font-size: 12px; padding: 7px 14px; flex: 1; text-align: center; }
+
+    /* Info bar */
+    .info-bar { font-size: 11px; line-height: 1.7; }
+
+    /* Lock control */
+    .lock-control-row { gap: 10px; padding: 10px 12px; }
+    .lock-toggle-btn { width: 100%; }
+
+    /* Modal */
+    .modal-box { padding: 28px 20px; }
+  }
+
+  @media (max-width: 380px) {
+    .config-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 19px; }
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media print {
+    body { background: #fff !important; color: #111 !important; }
+    body::before { display:none; }
+    .config-grid, .btn-generate, .tabs, .export-bar, .warning, .info-bar,
+    #player-search-section, .admin-toggle-bar, .admin-banner,
+    .lock-control-row, .last-updated-bar { display:none !important; }
+    #results { display: block !important; }
+    .tab-panel { display: block !important; }
+    #tab-pages { page-break-before: always; }
+    table { font-size: 12px; }
+    th { background: #eee !important; color: #333 !important; }
+    td { border-color: #ccc !important; }
+    .player-num { color: #6600cc !important; }
+    .page-card { border: 1px solid #ccc !important; background: #fafafa !important; break-inside: avoid; }
+    .page-header { background: #eee !important; color: #333 !important; }
+    .assignment-item { background: #f5f5f5 !important; }
+  }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+  .animate-in { animation: fadeIn .35s ease forwards; }
 </style>
 </head>
 <body>
+<!-- Access Lock Overlay (shown to players when admin locks) -->
+<div class="lock-overlay" id="lock-overlay">
+  <div class="lock-overlay-icon">🔒</div>
+  <div class="lock-overlay-title">AUCTION LOCKED</div>
+  <div class="lock-overlay-msg" id="lock-overlay-msg">
+    The auction plan is not yet available.<br>Please wait for your Guild Admin to open access.
+  </div>
+</div>
+
 <div class="wrap">
 
   <header>
@@ -716,6 +926,14 @@
   <!-- Admin toggle -->
   <div class="admin-toggle-bar">
     <button class="admin-toggle-btn" id="admin-toggle-btn" onclick="openAdminModal()">⚙ Admin</button>
+  </div>
+
+  <!-- Last Updated Bar -->
+  <div class="last-updated-bar" id="last-updated-bar" style="display:none;">
+    <div class="last-updated-dot" id="last-updated-dot"></div>
+    <span class="last-updated-label">Last updated:</span>
+    <span class="last-updated-time" id="last-updated-time">—</span>
+    <span class="last-updated-age" id="last-updated-age"></span>
   </div>
 
   <!-- ═══════════════════════════════════════
@@ -747,6 +965,15 @@
   ══════════════════════════════════════════ -->
   <div id="admin-panel">
     <div class="admin-banner">🔒 Admin Mode Active — Changes are saved and visible to all players</div>
+
+    <!-- Access Lock Control -->
+    <div class="lock-control-row">
+      <div>
+        <div class="lock-control-label">🔐 Player Access</div>
+        <div style="font-size:11px;color:var(--muted);font-family:'Share Tech Mono',monospace;margin-top:4px;" id="lock-status-desc">Players can currently search their assignments.</div>
+      </div>
+      <button class="lock-toggle-btn unlocked" id="lock-toggle-btn" onclick="toggleAccessLock()">🔒 Lock Access</button>
+    </div>
 
     <div class="sec-title">Reward Configuration</div>
     <div class="config-grid">
@@ -878,6 +1105,7 @@ const db    = getFirestore(fbApp);
 const REF_CONFIG  = doc(db, 'auction', 'config');
 const REF_ASSIGN  = doc(db, 'auction', 'assignments');
 const REF_PW      = doc(db, 'auction', 'password');
+const REF_META    = doc(db, 'auction', 'meta');   // { updatedAt, locked, lockMsg }
 
 // ─────────────────────────────────────────────
 //  Constants
@@ -895,6 +1123,7 @@ window._db         = db;
 window._REF_CONFIG = REF_CONFIG;
 window._REF_ASSIGN = REF_ASSIGN;
 window._REF_PW     = REF_PW;
+window._REF_META   = REF_META;
 
 // ─────────────────────────────────────────────
 //  Password helpers  (Firestore-backed)
@@ -942,6 +1171,8 @@ function unlockAdmin() {
   document.getElementById('admin-panel').classList.add('open');
   document.getElementById('admin-toggle-btn').textContent = '🔓 Lock Admin';
   document.getElementById('admin-toggle-btn').classList.add('active');
+  // Admins always bypass the player lock overlay
+  document.getElementById('lock-overlay').classList.remove('active');
   loadConfigToForm();
   const saved = window._cachedAssignments;
   if (saved) renderSavedAssignments(saved);
@@ -952,6 +1183,8 @@ function lockAdmin() {
   document.getElementById('admin-panel').classList.remove('open');
   document.getElementById('admin-toggle-btn').textContent = '⚙ Admin';
   document.getElementById('admin-toggle-btn').classList.remove('active');
+  // Re-apply lock overlay if currently locked
+  applyLockToPlayers(_isLocked);
 }
 
 window.changePassword = async function() {
@@ -1261,12 +1494,13 @@ window.generate = async function() {
     }
   });
 
-  // Persist to Firestore (both config + assignments)
+  // Persist to Firestore (both config + assignments + timestamp)
   const saveData = { playerData, fillinData, cfg, items, assignments, fillinAssign };
   try {
     await Promise.all([
       saveConfig(cfg),
-      saveAssignments(saveData)
+      saveAssignments(saveData),
+      setDoc(REF_META, { updatedAt: new Date() }, { merge: true })
     ]);
     // show brief save confirmation
     const btn = document.querySelector('.btn-generate');
@@ -1520,6 +1754,89 @@ window.exportCSV = function exportCSV() {
 }
 
 // ─────────────────────────────────────────────
+//  Access Lock
+// ─────────────────────────────────────────────
+let _isLocked = false;
+
+window.toggleAccessLock = async function() {
+  _isLocked = !_isLocked;
+  try {
+    await setDoc(REF_META, { locked: _isLocked }, { merge: true });
+    updateLockUI(_isLocked);
+  } catch(e) {
+    alert('Failed to update lock: ' + e.message);
+    _isLocked = !_isLocked; // revert
+  }
+};
+
+function updateLockUI(locked) {
+  _isLocked = locked;
+  const btn  = document.getElementById('lock-toggle-btn');
+  const desc = document.getElementById('lock-status-desc');
+  if (!btn) return;
+  if (locked) {
+    btn.textContent = '🔓 Unlock Access';
+    btn.className   = 'lock-toggle-btn locked';
+    desc.textContent = 'Players are currently BLOCKED from searching.';
+    desc.style.color = 'var(--red)';
+  } else {
+    btn.textContent = '🔒 Lock Access';
+    btn.className   = 'lock-toggle-btn unlocked';
+    desc.textContent = 'Players can currently search their assignments.';
+    desc.style.color = '';
+  }
+}
+
+function applyLockToPlayers(locked) {
+  // Admins bypass the lock
+  if (adminUnlocked) return;
+  const overlay = document.getElementById('lock-overlay');
+  if (locked) {
+    overlay.classList.add('active');
+  } else {
+    overlay.classList.remove('active');
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Timestamp helpers
+// ─────────────────────────────────────────────
+function formatTimestamp(ts) {
+  if (!ts) return null;
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const now = new Date();
+  const diffMs  = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffH   = Math.floor(diffMs / 3600000);
+  const diffD   = Math.floor(diffMs / 86400000);
+
+  const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  const full    = `${dateStr} · ${timeStr}`;
+
+  let age, dotClass;
+  if (diffMin < 5)        { age = 'just now';              dotClass = ''; }
+  else if (diffMin < 60)  { age = `${diffMin}m ago`;       dotClass = ''; }
+  else if (diffH < 6)     { age = `${diffH}h ago`;         dotClass = ''; }
+  else if (diffH < 24)    { age = `${diffH}h ago`;         dotClass = 'stale'; }
+  else                    { age = `${diffD}d ago`;          dotClass = 'old'; }
+
+  return { full, age, dotClass };
+}
+
+function renderTimestamp(ts) {
+  const bar = document.getElementById('last-updated-bar');
+  if (!ts) { bar.style.display = 'none'; return; }
+  const info = formatTimestamp(ts);
+  if (!info) return;
+  bar.style.display = 'flex';
+  document.getElementById('last-updated-time').textContent = info.full;
+  document.getElementById('last-updated-age').textContent  = `(${info.age})`;
+  const dot = document.getElementById('last-updated-dot');
+  dot.className = 'last-updated-dot' + (info.dotClass ? ' ' + info.dotClass : '');
+}
+
+// ─────────────────────────────────────────────
 //  On load: subscribe to Firestore for live updates
 // ─────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -1527,13 +1844,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const hint = document.querySelector('.search-hint');
   hint.textContent = '⏳ Connecting to cloud…';
 
-  // Realtime listener — fires immediately on load and on every future change
+  // ── Realtime: assignments ────────────────────
   onSnapshot(REF_ASSIGN, (snap) => {
     if (snap.exists()) {
       window._cachedAssignments = snap.data();
       hint.textContent = '✅ Live · Enter P# for main players · F# for fill-in players';
       hint.style.color = 'var(--green)';
-      // If admin is open, refresh the tables live
       if (adminUnlocked) renderSavedAssignments(window._cachedAssignments);
     } else {
       window._cachedAssignments = null;
@@ -1543,6 +1859,17 @@ window.addEventListener('DOMContentLoaded', () => {
   }, (err) => {
     hint.textContent = '⚠ Cloud connection failed — ' + err.message;
     hint.style.color = 'var(--red)';
+  });
+
+  // ── Realtime: meta (lock + timestamp) ────────
+  onSnapshot(REF_META, (snap) => {
+    if (!snap.exists()) return;
+    const data = snap.data();
+    // Timestamp
+    renderTimestamp(data.updatedAt || null);
+    // Lock — admins bypass
+    applyLockToPlayers(!!data.locked);
+    updateLockUI(!!data.locked);
   });
 });
 </script>
