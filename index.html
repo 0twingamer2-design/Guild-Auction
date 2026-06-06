@@ -91,6 +91,8 @@
     display: flex;
     justify-content: flex-end;
     margin-bottom: 24px;
+    position: relative;
+    z-index: 200; /* always above lock overlay (z-index: 50) */
   }
   .admin-toggle-btn {
     background: none;
