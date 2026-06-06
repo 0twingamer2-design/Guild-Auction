@@ -514,7 +514,7 @@
     <h1>Auction Queue</h1>
   </header>
 
-  <!-- Public view banner (replaces admin gate) -->
+  <!-- Public view banner with hidden admin access -->
   <div id="admin-gate" style="display:none"></div>
   <div id="public-view-banner" style="
     background: rgba(61,232,232,0.07);
@@ -529,7 +529,30 @@
     display: flex; align-items: center; gap: 10px;
   ">
     <span style="font-size:16px">👁</span>
-    <span>PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
+    <span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
+    <button id="admin-login-btn" onclick="openAdminLogin()" style="
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all .2s;
+      text-transform: uppercase; white-space: nowrap;
+    " onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">⚙ Admin</button>
+  </div>
+
+  <!-- Admin login modal (inline, not the main gate) -->
+  <div class="modal-overlay" id="admin-login-modal">
+    <div class="modal-box">
+      <h3 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--gold2);margin-bottom:8px;">Admin Access</h3>
+      <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:20px;">Enter the admin password to manage the queue.</p>
+      <input class="gate-input" type="password" id="admin-login-pw" placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') tryAdminLogin()"
+        style="margin-bottom:12px;">
+      <div id="admin-login-error" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;min-height:16px;margin-bottom:12px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-gold" style="flex:1" onclick="tryAdminLogin()">UNLOCK</button>
+        <button class="btn btn-outline" onclick="closeAdminLogin()">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <!-- Main content (shown after auth) -->
@@ -714,29 +737,73 @@ function loadQueue() {
   } catch(e) { queue = []; }
 }
 
-// ─── Admin gate ───────────────────────────────────────────────────────────────
-function tryGate() {
-  const pw = document.getElementById('gate-pw').value;
-  if (pw === ADMIN_PASSWORD) {
-    document.getElementById('admin-gate').style.display = 'none';
-    document.getElementById('main-content').style.display = 'block';
-    loadQueue();
-    renderAll();
-  } else {
-    document.getElementById('gate-error').textContent = 'Incorrect password.';
-    document.getElementById('gate-pw').value = '';
-    document.getElementById('gate-pw').focus();
-  }
-}
+// ─── Public view init ─────────────────────────────────────────────────────────
+let isAdmin = false;
 
-// ─── Auto-init for public view ────────────────────────────────────────────────
 (function initPublicView() {
   document.getElementById('main-content').style.display = 'block';
-  // Mark the page as public-view (hides all edit controls via CSS)
   document.body.classList.add('public-view');
   loadQueue();
   renderAll();
 })();
+
+// ─── Admin login modal ────────────────────────────────────────────────────────
+function openAdminLogin() {
+  document.getElementById('admin-login-modal').classList.add('open');
+  document.getElementById('admin-login-pw').focus();
+}
+function closeAdminLogin() {
+  document.getElementById('admin-login-modal').classList.remove('open');
+  document.getElementById('admin-login-pw').value = '';
+  document.getElementById('admin-login-error').textContent = '';
+}
+function tryAdminLogin() {
+  const pw = document.getElementById('admin-login-pw').value;
+  if (pw === ADMIN_PASSWORD) {
+    isAdmin = true;
+    closeAdminLogin();
+    // Switch to admin mode
+    document.body.classList.remove('public-view');
+    // Update banner to show admin mode
+    document.getElementById('public-view-banner').style.background = 'rgba(255,79,110,0.07)';
+    document.getElementById('public-view-banner').style.borderColor = 'rgba(255,79,110,0.25)';
+    document.getElementById('public-view-banner').style.color = 'var(--red)';
+    document.getElementById('public-view-banner').innerHTML = `
+      <span style="font-size:16px">🔓</span>
+      <span style="flex:1">ADMIN MODE — You can now manage the queue.</span>
+      <button onclick="exitAdminMode()" style="
+        background: none; border: 1px solid rgba(255,79,110,0.4); color: var(--red);
+        font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
+        padding: 4px 10px; border-radius: 4px; cursor: pointer; text-transform: uppercase;
+      ">Exit Admin</button>
+    `;
+  } else {
+    document.getElementById('admin-login-error').textContent = 'Incorrect password.';
+    document.getElementById('admin-login-pw').value = '';
+    document.getElementById('admin-login-pw').focus();
+  }
+}
+function exitAdminMode() {
+  isAdmin = false;
+  document.body.classList.add('public-view');
+  // Restore banner
+  document.getElementById('public-view-banner').style.background = 'rgba(61,232,232,0.07)';
+  document.getElementById('public-view-banner').style.borderColor = 'rgba(61,232,232,0.25)';
+  document.getElementById('public-view-banner').style.color = 'var(--cyan)';
+  document.getElementById('public-view-banner').innerHTML = `
+    <span style="font-size:16px">👁</span>
+    <span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
+    <button id="admin-login-btn" onclick="openAdminLogin()" style="
+      background: none; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
+      padding: 4px 10px; border-radius: 4px; cursor: pointer; text-transform: uppercase; white-space: nowrap;
+    " onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">⚙ Admin</button>
+  `;
+}
+
+// ─── Legacy tryGate (unused but kept for safety) ──────────────────────────────
+function tryGate() {}
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
