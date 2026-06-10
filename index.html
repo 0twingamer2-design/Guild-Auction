@@ -1143,6 +1143,51 @@
     opacity: 0.7;
     letter-spacing: 1px;
   }
+
+  /* === Today's Participants Banner === */
+  #today-participants-banner {
+    display: none;
+    margin-bottom: 28px;
+    background: linear-gradient(135deg, rgba(200,149,42,0.07) 0%, var(--bg2) 60%);
+    border: 1px solid rgba(200,149,42,0.35);
+    border-radius: 10px;
+    padding: 16px 20px;
+    animation: fadeIn .3s ease;
+  }
+  .tp-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .tp-label::after { content: ''; flex: 1; height: 1px; background: rgba(200,149,42,0.25); }
+  .tp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tp-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(200,149,42,0.1);
+    border: 1px solid rgba(200,149,42,0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--gold2);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .tp-chip.done {
+    background: rgba(61,255,155,0.08);
+    border-color: rgba(61,255,155,0.3);
+    color: var(--green);
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+  @media (max-width: 600px) {
+    #today-participants-banner { padding: 12px 14px; margin-bottom: 20px; }
+    .tp-chip { font-size: 11px; padding: 5px 10px; }
+  }
 </style>
 </head>
 <body>
@@ -1188,6 +1233,12 @@
         <div class="tutorial-caption">In-game: Guild Auction → All tab to see your auctioned items</div>
       </div>
     </div>
+    <!-- Today's Participants Banner (live from queue.html highlights) -->
+    <div id="today-participants-banner">
+      <div class="tp-label">⭐ Today's Participants</div>
+      <div class="tp-chips" id="today-participants-chips"></div>
+    </div>
+
     <div class="search-label">🔍 Find My Assignments</div>
     <div class="search-row">
       <div class="search-input-wrap">
@@ -1369,6 +1420,7 @@ const REF_CONFIG  = doc(db, 'auction', 'config');
 const REF_ASSIGN  = doc(db, 'auction', 'assignments');
 const REF_PW      = doc(db, 'auction', 'password');
 const REF_META    = doc(db, 'auction', 'meta');   // { updatedAt, locked, lockMsg }
+const REF_QUEUE   = doc(db, 'queue',   'data');   // Today's participants (from queue.html)
 
 // ─────────────────────────────────────────────
 //  Constants
@@ -2313,6 +2365,25 @@ window.addEventListener('DOMContentLoaded', () => {
     // Lock — admins bypass
     applyLockToPlayers(!!data.locked);
     updateLockUI(!!data.locked);
+  });
+
+  // ── Realtime: Today's Participants (from queue.html) ──
+  onSnapshot(REF_QUEUE, (snap) => {
+    const banner = document.getElementById('today-participants-banner');
+    const chips  = document.getElementById('today-participants-chips');
+    if (!banner || !chips) return;
+    if (!snap.exists()) { banner.style.display = 'none'; return; }
+    const members = snap.data().members || [];
+    const highlighted = members
+      .filter(m => m.highlighted)
+      .sort((a, b) => (a.queueNum || 9999) - (b.queueNum || 9999));
+    if (highlighted.length === 0) { banner.style.display = 'none'; return; }
+    banner.style.display = 'block';
+    chips.innerHTML = highlighted.map(m => {
+      const label = m.queueNum != null ? `P${m.queueNum}` : '—';
+      const isDone = !!m.done;
+      return `<div class="tp-chip${isDone ? ' done' : ''}">${isDone ? '✓' : '⭐'} ${label} ${m.name}</div>`;
+    }).join('');
   });
 });
 </script>
