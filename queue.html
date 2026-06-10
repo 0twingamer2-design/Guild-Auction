@@ -343,6 +343,55 @@
   .queue-table tbody tr.done-row { opacity: 0.45; }
   .queue-table tbody tr.done-row .q-num { text-decoration: line-through; color: var(--muted); }
 
+  /* === Highlight: Today's Participants === */
+  .queue-table tbody tr.hl-row {
+    background: rgba(200,149,42,0.10) !important;
+    border-left: 3px solid var(--gold);
+  }
+  .queue-table tbody tr.hl-row:hover { background: rgba(200,149,42,0.17) !important; }
+  .today-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: linear-gradient(135deg, rgba(200,149,42,0.22), rgba(245,200,66,0.12));
+    border: 1px solid rgba(245,200,66,0.45);
+    color: var(--gold2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 20px; margin-left: 6px;
+    white-space: nowrap; vertical-align: middle;
+  }
+  .q-hl-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 15px; padding: 3px 5px; border-radius: 4px;
+    transition: all .15s; line-height: 1; opacity: 0.3;
+  }
+  .q-hl-btn:hover { opacity: 1; transform: scale(1.25); }
+  .q-hl-btn.on { opacity: 1; filter: drop-shadow(0 0 5px var(--gold2)); }
+
+  /* Today's participants public banner */
+  #today-banner {
+    display: none;
+    background: linear-gradient(135deg, rgba(200,149,42,0.12), rgba(245,200,66,0.06));
+    border: 1px solid rgba(245,200,66,0.35);
+    border-radius: 10px; padding: 18px 22px; margin-bottom: 28px;
+    animation: fadeIn .35s ease;
+  }
+  #today-banner .tb-head {
+    font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+    color: var(--gold2); margin-bottom: 4px;
+  }
+  #today-banner .tb-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
+    margin-bottom: 14px;
+  }
+  #today-banner .tb-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  #today-banner .tb-chip {
+    background: rgba(200,149,42,0.15); border: 1px solid rgba(245,200,66,0.3);
+    color: var(--gold2); font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; padding: 5px 14px; border-radius: 20px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  #today-banner .tb-chip.done { opacity: 0.45; text-decoration: line-through; }
+
   .q-num-input {
     width: 60px;
     background: var(--bg3);
@@ -557,7 +606,7 @@
   ">
     <span style="font-size:16px">👁</span>
     <span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
-    <button id="admin-login-btn" onclick="openAdminLogin()" style="
+    <button id="admin-login-btn" onclick="window.openAdminLogin()" style="
       background: none; border: 1px solid var(--border); color: var(--muted);
       font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px;
       padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: all .2s;
@@ -577,12 +626,12 @@
         style="margin-bottom:12px;letter-spacing:1px;">
       <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Password</label>
       <input class="gate-input" type="password" id="admin-login-pw" placeholder="••••••••"
-        onkeydown="if(event.key==='Enter') tryAdminLogin()"
+        onkeydown="if(event.key==='Enter') window.tryAdminLogin()"
         style="margin-bottom:12px;">
       <div id="admin-login-error" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;min-height:16px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:10px;">
-        <button class="btn btn-gold" style="flex:1" onclick="tryAdminLogin()">LOGIN</button>
-        <button class="btn btn-outline" onclick="closeAdminLogin()">Cancel</button>
+        <button class="btn btn-gold" style="flex:1" onclick="window.tryAdminLogin()">LOGIN</button>
+        <button class="btn btn-outline" onclick="window.closeAdminLogin()">Cancel</button>
       </div>
       <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:14px;margin-bottom:0;text-align:center;">Leave username blank to use legacy password login</p>
     </div>
@@ -590,6 +639,13 @@
 
   <!-- Main content (shown after auth) -->
   <div id="main-content">
+
+    <!-- Today's Participants Banner -->
+    <div id="today-banner">
+      <div class="tb-head">⭐ Today's Bidding Participants</div>
+      <div class="tb-sub">If your name is listed below, save your gold — you're bidding today!</div>
+      <div class="tb-chips" id="today-chips"></div>
+    </div>
 
     <!-- Public member search -->
     <div id="member-search-section">
@@ -599,10 +655,10 @@
           <span class="member-search-icon">▶</span>
           <input type="text" id="member-search-input"
             placeholder="Type your UID or Player ID (e.g. 123456, P1)"
-            onkeydown="if(event.key==='Enter') doMemberSearch()"
+            onkeydown="if(event.key==='Enter') window.doMemberSearch()"
             autocomplete="off">
         </div>
-        <button class="btn btn-gold" onclick="doMemberSearch()">SEARCH</button>
+        <button class="btn btn-gold" onclick="window.doMemberSearch()">SEARCH</button>
       </div>
       <div class="member-search-hint"><span class="live-dot"></span>Live · Search by UID number or Player ID like P1, P2 · Queue updates in real time</div>
       <div id="member-result"></div>
@@ -646,16 +702,17 @@
       <!-- Toolbar -->
       <div class="toolbar">
         <div class="toolbar-group">
-          <button class="btn btn-gold" onclick="toggleImport()">⬆ Import from Sheet</button>
-          <button class="btn btn-cyan" onclick="toggleAddForm()">＋ Add Member</button>
+          <button class="btn btn-gold" onclick="window.toggleImport()">⬆ Import from Sheet</button>
+          <button class="btn btn-cyan" onclick="window.toggleAddForm()">＋ Add Member</button>
         </div>
         <div class="toolbar-sep"></div>
         <div class="toolbar-group">
-          <button class="btn btn-outline" onclick="shuffleQueue()" id="shuffle-btn">🎲 Assign Random Order</button>
+          <button class="btn btn-outline" onclick="window.shuffleQueue()" id="shuffle-btn">🎲 Assign Random Order</button>
+          <button class="btn btn-outline" onclick="window.toggleHighlightMode()" id="highlight-mode-btn">⭐ Highlight Today</button>
         </div>
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
-          <button class="btn btn-red" onclick="openResetModal()">↺ Reset All Done</button>
+          <button class="btn btn-red" onclick="window.openResetModal()">↺ Reset All Done</button>
         </div>
       </div>
 
@@ -665,8 +722,8 @@
         <textarea id="import-textarea" placeholder="Paste rows from Google Sheets here (Tab-separated)&#10;&#10;Example:&#10;123456&#9;Alice&#9;Officer&#10;234567&#9;Bob&#9;Member&#10;345678&#9;Carol&#9;Member&#10;&#10;• Copy cells from your sheet (UID, Name, Role columns) and paste here&#10;• First column = UID, Second column = Name, Third column = Role (optional)&#10;• Existing members with the same UID will be skipped"></textarea>
         <div class="import-hint">Tip: In Google Sheets, select your data rows → Ctrl+C → paste here. Tab-separated columns are auto-detected.</div>
         <div class="import-actions">
-          <button class="btn btn-gold" onclick="doImport()">Import Members</button>
-          <button class="btn btn-outline" onclick="toggleImport()">Cancel</button>
+          <button class="btn btn-gold" onclick="window.doImport()">Import Members</button>
+          <button class="btn btn-outline" onclick="window.toggleImport()">Cancel</button>
         </div>
         <div class="import-error" id="import-error"></div>
       </div>
@@ -680,14 +737,14 @@
           </div>
           <div class="add-form-field">
             <label>Name</label>
-            <input class="add-form-input" type="text" id="add-name" placeholder="e.g. GuildMaster" maxlength="40" onkeydown="if(event.key==='Enter') doAddMember()">
+            <input class="add-form-input" type="text" id="add-name" placeholder="e.g. GuildMaster" maxlength="40" onkeydown="if(event.key==='Enter') window.doAddMember()">
           </div>
           <div class="add-form-field" style="flex:0.5; min-width:120px">
             <label>Role</label>
-            <input class="add-form-input" type="text" id="add-role" placeholder="Member" maxlength="20" onkeydown="if(event.key==='Enter') doAddMember()">
+            <input class="add-form-input" type="text" id="add-role" placeholder="Member" maxlength="20" onkeydown="if(event.key==='Enter') window.doAddMember()">
           </div>
           <div style="padding-bottom:1px">
-            <button class="btn btn-gold" onclick="doAddMember()">Add</button>
+            <button class="btn btn-gold" onclick="window.doAddMember()">Add</button>
           </div>
         </div>
         <div class="add-form-error" id="add-error"></div>
@@ -741,9 +798,9 @@
 
       <!-- Filter tabs -->
       <div class="filter-tabs">
-        <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
-        <button class="filter-tab" onclick="setFilter('waiting',this)">Waiting</button>
-        <button class="filter-tab" onclick="setFilter('done',this)">Done</button>
+        <button class="filter-tab active" onclick="window.setFilter('all',this)">All</button>
+        <button class="filter-tab" onclick="window.setFilter('waiting',this)">Waiting</button>
+        <button class="filter-tab" onclick="window.setFilter('done',this)">Done</button>
       </div>
 
       <!-- Queue table -->
@@ -775,8 +832,8 @@
     <h3>Reset All Checkboxes?</h3>
     <p>This will uncheck all "Done" members and start a fresh round.<br>Queue order and members are kept — only the done status resets.</p>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeResetModal()">Cancel</button>
-      <button class="btn btn-red" onclick="doReset()">Yes, Reset</button>
+      <button class="btn btn-outline" onclick="window.closeResetModal()">Cancel</button>
+      <button class="btn btn-red" onclick="window.doReset()">Yes, Reset</button>
     </div>
   </div>
 </div>
@@ -787,8 +844,8 @@
     <h3>Remove Member?</h3>
     <p id="delete-modal-msg">Are you sure you want to remove this member from the queue?</p>
     <div class="modal-actions">
-      <button class="btn btn-outline" onclick="closeDeleteModal()">Cancel</button>
-      <button class="btn btn-red" onclick="confirmDelete()">Remove</button>
+      <button class="btn btn-outline" onclick="window.closeDeleteModal()">Cancel</button>
+      <button class="btn btn-red" onclick="window.confirmDelete()">Remove</button>
     </div>
   </div>
 </div>
@@ -1077,6 +1134,7 @@ async function renderAdminUserList() {
 function renderAll() {
   renderStats();
   renderTable();
+  renderTodayBanner();
 }
 
 function renderStats() {
@@ -1127,9 +1185,9 @@ function renderTable() {
   };
 
   tbody.innerHTML = rows.map(m => `
-    <tr class="${m.done ? 'done-row' : ''}" data-uid="${esc(m.uid)}">
+    <tr class="${m.done ? 'done-row' : ''}${m.highlighted ? ' hl-row' : ''}" data-uid="${esc(m.uid)}">
       <td class="q-num">${numCell(m)}</td>
-      <td><div class="q-name">${esc(m.name)}</div></td>
+      <td><div class="q-name">${esc(m.name)}${m.highlighted ? '<span class="today-badge">⭐ Today</span>' : ''}</div></td>
       <td class="q-uid">${esc(m.uid)}</td>
       <td class="q-uid">${esc(m.role || '—')}</td>
       <td><span class="q-status-pill ${m.done ? 'done' : 'waiting'}">${m.done ? '✓ Done' : 'Waiting'}</span></td>
@@ -1138,6 +1196,7 @@ function renderTable() {
           onchange="window.toggleDone('${esc(m.uid)}', this.checked)" title="Mark as done">
       </td>
       <td class="q-actions">
+        ${isAdmin && !previewingPublic ? `<button class="q-hl-btn${m.highlighted ? ' on' : ''}" onclick="window.toggleHighlight('${esc(m.uid)}')" title="${m.highlighted ? 'Remove from today' : 'Mark for today'}">⭐</button>` : ''}
         <button class="q-del-btn" onclick="window.openDeleteModal('${esc(m.uid)}', '${esc(m.name)}')" title="Remove">✕</button>
       </td>
     </tr>
@@ -1346,12 +1405,53 @@ window.doMemberSearch = function() {
       </div>
       <div class="mr-body">
         <div class="mr-row">Role: <strong>${esc(m.role || '—')}</strong></div>
+        ${m.highlighted && !m.done ? `<div class="mr-row" style="color:var(--gold2)">⭐ You are scheduled to bid <strong>today</strong> — make sure you have enough gold!</div>` : ''}
         ${!m.done && posInWaiting >= 0 ? `<div class="mr-row">Position in waiting list: <strong>#${posInWaiting + 1} of ${waitingList.length} remaining</strong></div>` : ''}
         ${m.done ? `<div class="mr-row" style="color:var(--green)">✓ You have already completed your auction turn this round.</div>` : ''}
       </div>
     </div>
   `;
 };
+
+// ─── Highlight: Today's Participants ─────────────────────────────────────────
+window.toggleHighlight = function(uid) {
+  const m = queue.find(x => x.uid === uid);
+  if (!m) return;
+  m.highlighted = !m.highlighted;
+  saveQueue();
+  renderAll();
+  const n = queue.filter(x => x.highlighted).length;
+  toast(m.highlighted ? `⭐ ${m.name} added to today's list (${n} total)` : `${m.name} removed from today's list`, m.highlighted ? 'success' : '');
+};
+
+window.toggleHighlightMode = function() {
+  const btn = document.getElementById('highlight-mode-btn');
+  const active = btn.dataset.active === '1';
+  if (!active) {
+    btn.dataset.active = '1';
+    btn.style.background = 'rgba(200,149,42,0.15)';
+    btn.style.borderColor = 'rgba(245,200,66,0.5)';
+    btn.style.color = 'var(--gold2)';
+    toast('Click ⭐ on any row to mark them as today\'s participant', '');
+  } else {
+    btn.dataset.active = '0';
+    btn.style.background = '';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+  }
+};
+
+function renderTodayBanner() {
+  const banner = document.getElementById('today-banner');
+  const chips  = document.getElementById('today-chips');
+  if (!banner || !chips) return;
+  const hl = queue.filter(m => m.highlighted).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
+  if (hl.length === 0) { banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  chips.innerHTML = hl.map(m =>
+    `<div class="tb-chip${m.done ? ' done' : ''}">${m.done ? '✓' : '⭐'} #${m.queueNum ?? '?'} ${esc(m.name)}</div>`
+  ).join('');
+}
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 let toastTimer;
