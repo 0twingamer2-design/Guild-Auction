@@ -343,6 +343,22 @@
   .queue-table tbody tr.done-row { opacity: 0.45; }
   .queue-table tbody tr.done-row .q-num { text-decoration: line-through; color: var(--muted); }
 
+  .q-num-input {
+    width: 60px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--gold2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 700;
+    padding: 4px 6px;
+    border-radius: 4px;
+    outline: none;
+    text-align: center;
+    transition: border-color .2s;
+  }
+  .q-num-input:focus { border-color: var(--gold); }
+  .q-num-input::-webkit-inner-spin-button { opacity: 0.4; }
+
   .q-num {
     font-family: 'JetBrains Mono', monospace;
     font-size: 18px; font-weight: 700;
@@ -487,12 +503,22 @@
   .public-view #import-panel,
   .public-view #add-form-panel,
   .public-view #pw-change-card,
+  .public-view #admin-users-card,
   .public-view .queue-table th:nth-child(6),
   .public-view .queue-table td:nth-child(6),
   .public-view .queue-table th:nth-child(7),
   .public-view .queue-table td:nth-child(7) {
     display: none !important;
   }
+  .admin-user-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 12px;
+  }
+  .admin-user-item .u-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); flex: 1; }
+  .admin-user-item .u-you { font-size: 10px; color: var(--green); background: rgba(61,255,155,0.1); border: 1px solid rgba(61,255,155,0.3); border-radius: 3px; padding: 1px 6px; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+  .admin-user-item .u-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 5px; border-radius: 3px; transition: color .15s; line-height: 1; }
+  .admin-user-item .u-del:hover { color: var(--red); }
   .public-view .q-done-cb { pointer-events: none; }
 
   /* Mobile */
@@ -543,16 +569,22 @@
   <!-- Admin login modal (inline, not the main gate) -->
   <div class="modal-overlay" id="admin-login-modal">
     <div class="modal-box">
-      <h3 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--gold2);margin-bottom:8px;">Admin Access</h3>
-      <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:20px;">Enter the admin password to manage the queue.</p>
+      <h3 style="font-family:'Playfair Display',serif;font-size:20px;color:var(--gold2);margin-bottom:8px;">Admin Login</h3>
+      <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:13px;margin-bottom:20px;">Enter your admin credentials to manage the queue.</p>
+      <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Username</label>
+      <input class="gate-input" type="text" id="admin-login-username" placeholder="username"
+        onkeydown="if(event.key==='Enter') document.getElementById('admin-login-pw').focus()"
+        style="margin-bottom:12px;letter-spacing:1px;">
+      <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Password</label>
       <input class="gate-input" type="password" id="admin-login-pw" placeholder="••••••••"
         onkeydown="if(event.key==='Enter') tryAdminLogin()"
         style="margin-bottom:12px;">
       <div id="admin-login-error" style="color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;min-height:16px;margin-bottom:12px;"></div>
       <div style="display:flex;gap:10px;">
-        <button class="btn btn-gold" style="flex:1" onclick="tryAdminLogin()">UNLOCK</button>
+        <button class="btn btn-gold" style="flex:1" onclick="tryAdminLogin()">LOGIN</button>
         <button class="btn btn-outline" onclick="closeAdminLogin()">Cancel</button>
       </div>
+      <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;margin-top:14px;margin-bottom:0;text-align:center;">Leave username blank to use legacy password login</p>
     </div>
   </div>
 
@@ -681,6 +713,32 @@
       </div>
       </div><!-- /pw-change-card -->
 
+      <!-- Admin User Management -->
+      <div id="admin-users-card" style="margin-top:0">
+        <div class="section-label" style="margin-top:28px;">👥 Admin Users</div>
+        <div style="background:var(--bg2);border:1px solid rgba(155,109,255,0.25);border-radius:8px;padding:18px 20px;margin-bottom:24px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--purple);"></div>
+          <p style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;margin-bottom:16px;line-height:1.7;">
+            Register admin accounts. Each admin logs in with their own username + password. The legacy single-password still works for backwards compatibility.
+          </p>
+          <!-- Add new admin -->
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;">
+            <div style="flex:1;min-width:130px;">
+              <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Username</label>
+              <input type="text" id="new-admin-username" placeholder="e.g. guildmaster" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;padding:9px 12px;border-radius:4px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'">
+            </div>
+            <div style="flex:1;min-width:130px;">
+              <label style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px;">Password</label>
+              <input type="password" id="new-admin-password" placeholder="password" style="width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;padding:9px 12px;border-radius:4px;outline:none;transition:border-color .2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter') window.addAdminUserUI()">
+            </div>
+            <button onclick="window.addAdminUserUI()" style="padding:9px 18px;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:rgba(155,109,255,0.12);border:1px solid rgba(155,109,255,0.4);color:var(--purple);border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap;" onmouseover="this.style.background='rgba(155,109,255,0.22)'" onmouseout="this.style.background='rgba(155,109,255,0.12)'">Add Admin</button>
+          </div>
+          <div id="admin-users-msg" style="font-size:11px;margin-bottom:10px;min-height:16px;font-family:'JetBrains Mono',monospace;"></div>
+          <!-- Registered admins list -->
+          <div id="admin-users-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+      </div>
+
       <!-- Filter tabs -->
       <div class="filter-tabs">
         <button class="filter-tab active" onclick="setFilter('all',this)">All</button>
@@ -739,8 +797,9 @@
 
 <script type="module">
 // ─── Firebase ─────────────────────────────────────────────────────────────────
-import { initializeApp }                                    from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getFirestore, doc, getDoc, setDoc, onSnapshot }   from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { initializeApp }                                          from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, getDocs, deleteDoc }
+  from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey:            "AIzaSyCsuRffnvtEBE04p3XkuXsmz9BrUaW8iSw",
@@ -751,24 +810,73 @@ const firebaseConfig = {
   appId:             "1:333498953458:web:a8fe3fdaf3fafee6922a6b"
 };
 
-const db       = getFirestore(initializeApp(firebaseConfig));
-const REF_PW   = doc(db, 'auction', 'password');   // shared with index.html
-const REF_QUEUE = doc(db, 'queue', 'data');
+const db         = getFirestore(initializeApp(firebaseConfig));
+const REF_PW     = doc(db, 'auction', 'password');   // legacy single-password (kept for index.html compat)
+const REF_QUEUE  = doc(db, 'queue', 'data');
+const ADMINS_COL = collection(db, 'admins');          // admins/{username} → { username, passwordHash }
 
 const DEFAULT_PW = 'admin1234';
+const SESSION_KEY = 'rooc_admin_user';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let queue  = [];
 let filter = 'all';
 let pendingDeleteUid = null;
 let isAdmin = false;
+let currentAdminUser = null;   // username of logged-in admin
+let previewingPublic = false;  // admin toggled to preview public view
 
-// ─── Password helpers ─────────────────────────────────────────────────────────
-async function getPassword() {
+// ─── Simple hash (FNV-1a, good enough for non-security passwords) ─────────────
+function hashPw(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+}
+
+// ─── Admin registry helpers ───────────────────────────────────────────────────
+async function getAdmins() {
   try {
-    const snap = await getDoc(REF_PW);
-    return snap.exists() ? snap.data().value : DEFAULT_PW;
-  } catch(e) { return DEFAULT_PW; }
+    const snap = await getDocs(ADMINS_COL);
+    const list = [];
+    snap.forEach(d => list.push({ id: d.id, ...d.data() }));
+    return list;
+  } catch(e) { return []; }
+}
+
+async function checkAdminCredentials(username, password) {
+  // Also accept legacy single password for backwards compat
+  try {
+    const legacySnap = await getDoc(REF_PW);
+    const legacyPw = legacySnap.exists() ? legacySnap.data().value : DEFAULT_PW;
+    if (password === legacyPw) return true; // legacy match
+  } catch(e) {}
+  // Check admin registry
+  try {
+    const adminDoc = await getDoc(doc(db, 'admins', username.toLowerCase()));
+    if (!adminDoc.exists()) return false;
+    return adminDoc.data().passwordHash === hashPw(password);
+  } catch(e) { return false; }
+}
+
+async function addAdminUser(username, password) {
+  const key = username.toLowerCase().trim();
+  if (!key) throw new Error('Username cannot be empty');
+  await setDoc(doc(db, 'admins', key), { username: username.trim(), passwordHash: hashPw(password) });
+}
+
+async function removeAdminUser(username) {
+  await deleteDoc(doc(db, 'admins', username.toLowerCase()));
+}
+
+// ─── Session persistence ──────────────────────────────────────────────────────
+function saveSession(username) {
+  try { sessionStorage.setItem(SESSION_KEY, username); } catch(e) {}
+}
+function clearSession() {
+  try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+}
+function getSession() {
+  try { return sessionStorage.getItem(SESSION_KEY); } catch(e) { return null; }
 }
 
 // ─── Firebase queue persistence ───────────────────────────────────────────────
@@ -781,7 +889,7 @@ async function saveQueue() {
   }
 }
 
-// ─── Public view init + live listener ────────────────────────────────────────
+// ─── Init: check session, then start live listener ────────────────────────────
 document.getElementById('main-content').style.display = 'block';
 document.body.classList.add('public-view');
 
@@ -802,10 +910,32 @@ onSnapshot(REF_QUEUE, (snap) => {
   if (hint) { hint.textContent = '⚠ Cloud connection failed — ' + err.message; hint.style.color = 'var(--red)'; }
 });
 
-// ─── Admin login ─────────────────────────────────────────────────────────────
+// Restore session on load
+(async () => {
+  const savedUser = getSession();
+  if (savedUser) {
+    // Verify user still exists in registry
+    try {
+      const adminDoc = await getDoc(doc(db, 'admins', savedUser.toLowerCase()));
+      const legacySnap = await getDoc(REF_PW);
+      // Accept if in registry OR if it was the legacy single-admin session
+      if (adminDoc.exists() || savedUser === '__legacy__') {
+        currentAdminUser = savedUser === '__legacy__' ? 'Admin' : adminDoc.data().username;
+        enterAdminMode(false); // silent restore, no modal close needed
+      } else {
+        clearSession();
+      }
+    } catch(e) { clearSession(); }
+  }
+})();
+
+// ─── Admin login modal ────────────────────────────────────────────────────────
 window.openAdminLogin = function() {
   document.getElementById('admin-login-modal').classList.add('open');
-  setTimeout(() => document.getElementById('admin-login-pw').focus(), 80);
+  document.getElementById('admin-login-username').value = '';
+  document.getElementById('admin-login-pw').value = '';
+  document.getElementById('admin-login-error').textContent = '';
+  setTimeout(() => document.getElementById('admin-login-username').focus(), 80);
 };
 window.closeAdminLogin = function() {
   document.getElementById('admin-login-modal').classList.remove('open');
@@ -813,46 +943,68 @@ window.closeAdminLogin = function() {
   document.getElementById('admin-login-error').textContent = '';
 };
 window.tryAdminLogin = async function() {
-  const pw    = document.getElementById('admin-login-pw').value;
-  const saved = await getPassword();
-  if (pw === saved) {
-    isAdmin = true;
+  const username = document.getElementById('admin-login-username').value.trim();
+  const pw       = document.getElementById('admin-login-pw').value;
+  const errEl    = document.getElementById('admin-login-error');
+  errEl.textContent = 'Checking…';
+  const ok = await checkAdminCredentials(username || '__legacy__', pw);
+  if (ok) {
+    currentAdminUser = username || 'Admin';
+    saveSession(username ? username.toLowerCase() : '__legacy__');
     window.closeAdminLogin();
-    document.body.classList.remove('public-view');
-    document.getElementById('public-view-banner').style.cssText = `
-      background:rgba(255,79,110,0.07);border:1px solid rgba(255,79,110,0.25);
-      border-radius:8px;padding:12px 18px;margin-bottom:24px;
-      font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--red);
-      letter-spacing:1px;display:flex;align-items:center;gap:10px;
-    `;
-    document.getElementById('public-view-banner').innerHTML = `
-      <span style="font-size:16px">🔓</span>
-      <span style="flex:1">ADMIN MODE — You can now manage the queue.</span>
-      <button onclick="window.exitAdminMode()" style="background:none;border:1px solid rgba(255,79,110,0.4);color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;">Exit Admin</button>
-    `;
+    enterAdminMode(true);
   } else {
-    document.getElementById('admin-login-error').textContent = 'Incorrect password.';
+    errEl.textContent = 'Incorrect username or password.';
     document.getElementById('admin-login-pw').value = '';
     document.getElementById('admin-login-pw').focus();
   }
 };
+
+function enterAdminMode(doRender) {
+  isAdmin = true;
+  previewingPublic = false;
+  document.body.classList.remove('public-view');
+  updateBanner();
+  renderAll();
+  renderAdminUserList();
+}
+
 window.exitAdminMode = function() {
   isAdmin = false;
+  currentAdminUser = null;
+  previewingPublic = false;
+  clearSession();
   document.body.classList.add('public-view');
-  document.getElementById('public-view-banner').style.cssText = `
-    background:rgba(61,232,232,0.07);border:1px solid rgba(61,232,232,0.25);
-    border-radius:8px;padding:12px 18px;margin-bottom:24px;
-    font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);
-    letter-spacing:1px;display:flex;align-items:center;gap:10px;
-  `;
-  document.getElementById('public-view-banner').innerHTML = `
-    <span style="font-size:16px">👁</span>
-    <span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span>
-    <button onclick="window.openAdminLogin()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;white-space:nowrap;">⚙ Admin</button>
-  `;
+  updateBanner();
+  renderAll();
 };
 
-// ─── Change password (shared with index.html) ─────────────────────────────────
+window.togglePublicPreview = function() {
+  previewingPublic = !previewingPublic;
+  if (previewingPublic) {
+    document.body.classList.add('public-view');
+  } else {
+    document.body.classList.remove('public-view');
+  }
+  updateBanner();
+  renderAll();
+};
+
+function updateBanner() {
+  const banner = document.getElementById('public-view-banner');
+  if (!isAdmin) {
+    banner.style.cssText = `background:rgba(61,232,232,0.07);border:1px solid rgba(61,232,232,0.25);border-radius:8px;padding:12px 18px;margin-bottom:24px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:1px;display:flex;align-items:center;gap:10px;`;
+    banner.innerHTML = `<span style="font-size:16px">👁</span><span style="flex:1">PUBLIC VIEW — Read-only. Queue data is live. Only admins can make changes.</span><button onclick="window.openAdminLogin()" style="background:none;border:1px solid var(--border);color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;white-space:nowrap;">⚙ Login</button>`;
+  } else if (previewingPublic) {
+    banner.style.cssText = `background:rgba(155,109,255,0.07);border:1px solid rgba(155,109,255,0.3);border-radius:8px;padding:12px 18px;margin-bottom:24px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--purple);letter-spacing:1px;display:flex;align-items:center;gap:10px;`;
+    banner.innerHTML = `<span style="font-size:16px">👁</span><span style="flex:1">PREVIEWING PUBLIC VIEW as <strong>${esc(currentAdminUser)}</strong></span><button onclick="window.togglePublicPreview()" style="background:rgba(155,109,255,0.15);border:1px solid rgba(155,109,255,0.4);color:var(--purple);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 12px;border-radius:4px;cursor:pointer;text-transform:uppercase;">↩ Back to Admin</button>`;
+  } else {
+    banner.style.cssText = `background:rgba(255,79,110,0.07);border:1px solid rgba(255,79,110,0.25);border-radius:8px;padding:12px 18px;margin-bottom:24px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--red);letter-spacing:1px;display:flex;align-items:center;gap:10px;`;
+    banner.innerHTML = `<span style="font-size:16px">🔓</span><span style="flex:1">LOGGED IN as <strong>${esc(currentAdminUser)}</strong></span><button onclick="window.togglePublicPreview()" style="background:none;border:1px solid rgba(61,232,232,0.3);color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;margin-right:4px;">👁 Public View</button><button onclick="window.exitAdminMode()" style="background:none;border:1px solid rgba(255,79,110,0.4);color:var(--red);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:1px;padding:4px 10px;border-radius:4px;cursor:pointer;text-transform:uppercase;">Logout</button>`;
+  }
+}
+
+// ─── Change legacy password ────────────────────────────────────────────────────
 window.changeQueuePassword = async function() {
   const np  = document.getElementById('queue-new-pw').value.trim();
   const cp  = document.getElementById('queue-confirm-pw').value.trim();
@@ -861,7 +1013,7 @@ window.changeQueuePassword = async function() {
   if (np !== cp) { msg.style.color='var(--red)'; msg.textContent='Passwords do not match.'; return; }
   try {
     await setDoc(REF_PW, { value: np });
-    msg.style.color='var(--green)'; msg.textContent='✓ Password updated (applies to both pages).';
+    msg.style.color='var(--green)'; msg.textContent='✓ Legacy password updated (applies to both pages).';
     document.getElementById('queue-new-pw').value = '';
     document.getElementById('queue-confirm-pw').value = '';
     setTimeout(() => msg.textContent = '', 3500);
@@ -869,6 +1021,57 @@ window.changeQueuePassword = async function() {
     msg.style.color='var(--red)'; msg.textContent='✕ Save failed: ' + e.message;
   }
 };
+
+// ─── Admin user management ─────────────────────────────────────────────────────
+window.addAdminUserUI = async function() {
+  const username = document.getElementById('new-admin-username').value.trim();
+  const password = document.getElementById('new-admin-password').value;
+  const msg = document.getElementById('admin-users-msg');
+  if (!username) { msg.style.color='var(--red)'; msg.textContent='Username is required.'; return; }
+  if (!password) { msg.style.color='var(--red)'; msg.textContent='Password is required.'; return; }
+  if (password.length < 4) { msg.style.color='var(--red)'; msg.textContent='Password must be at least 4 characters.'; return; }
+  try {
+    await addAdminUser(username, password);
+    document.getElementById('new-admin-username').value = '';
+    document.getElementById('new-admin-password').value = '';
+    msg.style.color='var(--green)'; msg.textContent=`✓ Admin "${username}" added.`;
+    setTimeout(() => msg.textContent = '', 3000);
+    renderAdminUserList();
+  } catch(e) {
+    msg.style.color='var(--red)'; msg.textContent='✕ Failed: ' + e.message;
+  }
+};
+
+window.removeAdminUserUI = async function(username) {
+  if (username.toLowerCase() === currentAdminUser?.toLowerCase()) {
+    toast('✕ Cannot remove yourself while logged in', 'error'); return;
+  }
+  try {
+    await removeAdminUser(username);
+    toast(`Removed admin "${username}"`, '');
+    renderAdminUserList();
+  } catch(e) {
+    toast('✕ Failed: ' + e.message, 'error');
+  }
+};
+
+async function renderAdminUserList() {
+  if (!isAdmin) return;
+  const listEl = document.getElementById('admin-users-list');
+  if (!listEl) return;
+  const admins = await getAdmins();
+  if (admins.length === 0) {
+    listEl.innerHTML = `<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);padding:8px 0;">No admin accounts registered yet. Add one above.</div>`;
+    return;
+  }
+  listEl.innerHTML = admins.map(a => `
+    <div class="admin-user-item">
+      <span class="u-name">${esc(a.username || a.id)}</span>
+      ${(a.id === currentAdminUser?.toLowerCase()) ? '<span class="u-you">YOU</span>' : ''}
+      <button class="u-del" onclick="window.removeAdminUserUI('${esc(a.id)}')" title="Remove admin">✕</button>
+    </div>
+  `).join('');
+}
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
@@ -880,7 +1083,8 @@ function renderStats() {
   const total = queue.length;
   const done  = queue.filter(m => m.done).length;
   const rem   = total - done;
-  const next  = queue.find(m => !m.done);
+  const waiting = queue.filter(m => !m.done).sort((a,b) => (a.queueNum||999) - (b.queueNum||999));
+  const next  = waiting[0];
   document.getElementById('stat-total').textContent     = total;
   document.getElementById('stat-done').textContent      = done;
   document.getElementById('stat-remaining').textContent = rem;
@@ -906,9 +1110,25 @@ function renderTable() {
     return;
   }
 
+  // In public/preview view: show waiting first sorted by queueNum, then done at bottom
+  const showPublic = !isAdmin || previewingPublic;
+  if (showPublic) {
+    const waiting = rows.filter(m => !m.done).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
+    const done    = rows.filter(m =>  m.done).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
+    rows = [...waiting, ...done];
+  }
+
+  const numCell = (m) => {
+    if (isAdmin && !previewingPublic) {
+      return `<input type="number" class="q-num-input" data-uid="${esc(m.uid)}" value="${m.queueNum != null ? m.queueNum : ''}" placeholder="—" min="1" title="Edit queue number">`;
+    }
+    if (m.done) return `<span style="text-decoration:line-through;color:var(--muted)">${m.queueNum||'—'}</span>`;
+    return String(m.queueNum != null ? m.queueNum : '—');
+  };
+
   tbody.innerHTML = rows.map(m => `
     <tr class="${m.done ? 'done-row' : ''}" data-uid="${esc(m.uid)}">
-      <td class="q-num">${m.queueNum || '—'}</td>
+      <td class="q-num">${numCell(m)}</td>
       <td><div class="q-name">${esc(m.name)}</div></td>
       <td class="q-uid">${esc(m.uid)}</td>
       <td class="q-uid">${esc(m.role || '—')}</td>
@@ -922,6 +1142,13 @@ function renderTable() {
       </td>
     </tr>
   `).join('');
+
+  // Attach blur (not change) listeners to queue-num inputs so re-render happens on leave, not on each keystroke
+  tbody.querySelectorAll('.q-num-input').forEach(inp => {
+    inp.addEventListener('change', function() {
+      window.setQueueNum(this.dataset.uid, this.value);
+    });
+  });
 }
 
 function esc(s) {
@@ -929,6 +1156,16 @@ function esc(s) {
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
+window.setQueueNum = function(uid, val) {
+  const m = queue.find(x => x.uid === uid);
+  if (!m) return;
+  const num = parseInt(val);
+  m.queueNum = isNaN(num) || val === '' ? null : num;
+  saveQueue();
+  renderAll();
+  toast(m.queueNum != null ? `✓ ${m.name} → #${m.queueNum}` : `✓ ${m.name} queue # cleared`, 'success');
+};
+
 window.toggleDone = function(uid, checked) {
   const m = queue.find(x => x.uid === uid);
   if (!m) return;

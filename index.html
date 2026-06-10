@@ -970,6 +970,109 @@
 
   @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
   .animate-in { animation: fadeIn .35s ease forwards; }
+  /* === Buyout Tracker === */
+  .buyout-section {
+    margin-bottom: 28px;
+    background: var(--bg2);
+    border: 1px solid rgba(255,79,110,0.25);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .buyout-section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .buyout-section-label::after { content: ''; flex: 1; height: 1px; background: rgba(255,79,110,0.2); }
+  .buyout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  .buyout-slot-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    padding: 7px 6px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    min-height: 56px;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .buyout-slot-btn:hover { border-color: var(--red); color: var(--text); }
+  .buyout-slot-btn.bought-out {
+    background: rgba(255,79,110,0.12);
+    border-color: rgba(255,79,110,0.5);
+    color: var(--red);
+    text-decoration: line-through;
+    opacity: 0.7;
+  }
+  .buyout-slot-btn .slot-loc {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .buyout-slot-btn.bought-out .slot-loc { color: var(--red); }
+  .buyout-slot-btn .slot-type {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+  .buyout-hint {
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .buyout-count-badge {
+    display: inline-block;
+    background: rgba(255,79,110,0.15);
+    border: 1px solid rgba(255,79,110,0.35);
+    color: var(--red);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 1px 6px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* === Adjusted slot badge in player result === */
+  .adjusted-slot-badge {
+    display: inline-block;
+    background: rgba(255,79,110,0.12);
+    border: 1px solid rgba(255,79,110,0.3);
+    color: var(--red);
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 1px 6px;
+    margin-left: 6px;
+    white-space: nowrap;
+  }
+  .adjusted-slot-note {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: rgba(255,79,110,0.06);
+    border: 1px solid rgba(255,79,110,0.2);
+    border-radius: 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #ff8fa3;
+    letter-spacing: 0.3px;
+  }
 
   /* === Tutorial Banner === */
   .tutorial-banner {
@@ -1126,6 +1229,21 @@
       </div>
     </div>
 
+
+    <!-- Buyout Tracker -->
+    <div class="buyout-section" id="buyout-section" style="display:none;">
+      <div class="buyout-section-label">💥 Buyout Tracker
+        <span class="buyout-count-badge" id="buyout-count-badge">0 bought out</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:10px;letter-spacing:0.3px;">
+        Click a slot to mark it as <span style="color:var(--red)">bought out</span>. Players' adjusted slot numbers update automatically.
+      </div>
+      <div class="buyout-grid" id="buyout-grid"></div>
+      <div class="buyout-hint">
+        🔴 = Bought out (removed from auction list, causes later items to shift up in the game UI)
+      </div>
+    </div>
+
     <button class="btn-generate" onclick="generate()">⚔ GENERATE & SAVE ASSIGNMENTS</button>
 
     <div id="warning" class="warning"></div>
@@ -1227,6 +1345,141 @@ const TYPE_EMOJI = { album:'🃏', frag:'💎', wf:'🪶 W', bf:'🪶 B' };
 const TYPE_PRICE = { album:800, frag:1000, wf:80, bf:80 };
 
 const DEFAULT_PW = 'admin1234';
+// ─────────────────────────────────────────────
+//  Buyout Tracker State
+// ─────────────────────────────────────────────
+let _buyoutSet = new Set(); // globalIdx values of bought-out items
+
+const REF_BUYOUT = doc(db, 'auction', 'buyouts');
+
+async function loadBuyouts() {
+  try {
+    const snap = await getDoc(REF_BUYOUT);
+    if (snap.exists()) {
+      _buyoutSet = new Set((snap.data().bought || []).map(Number));
+    } else {
+      _buyoutSet = new Set();
+    }
+  } catch(e) { _buyoutSet = new Set(); console.error('loadBuyouts', e); }
+}
+
+async function saveBuyouts() {
+  try {
+    await setDoc(REF_BUYOUT, { bought: [..._buyoutSet] });
+  } catch(e) { console.error('saveBuyouts', e); }
+}
+
+// ─── Core: rebuild player/fillin data filtered by current buyout set ──────
+// Returns { playerData, fillinData } with correct page/slot numbers after
+// removing bought-out items from the auction list.
+// "bought-out" items are removed entirely; remaining items re-number from 0.
+function buildEffectiveData() {
+  const items       = window._lastItems;
+  const assignments = window._lastAssignments;
+  const fillinAssign= window._lastFillinAssign;
+  const cfg         = window._lastCfg;
+  if (!items || !cfg) return null;
+
+  // Build a mapping: originalGlobalIdx → effectiveGlobalIdx (after removing buyouts)
+  // Items that are bought-out are skipped entirely.
+  const effectiveIdx = {};   // originalIdx → effectiveIdx (undefined if bought out)
+  let counter = 0;
+  for (let i = 0; i < items.length; i++) {
+    if (!_buyoutSet.has(i)) {
+      effectiveIdx[i] = counter++;
+    }
+    // bought-out items get no effectiveIdx entry
+  }
+
+  // effective page/slot from effectiveIdx
+  function effLoc(origIdx) {
+    const eff = effectiveIdx[origIdx];
+    if (eff === undefined) return null; // bought out
+    return {
+      page: Math.floor(eff / 4) + 1,
+      slot: (eff % 4) + 1,
+      originalPage: Math.floor(origIdx / 4) + 1,
+      originalSlot: (origIdx % 4) + 1,
+    };
+  }
+
+  // Rebuild playerData
+  const playerData = {};
+  for (let p = 0; p < cfg.players; p++)
+    playerData[p] = { items: [], totals: { album:0, frag:0, wf:0, bf:0 } };
+  items.forEach((t, origIdx) => {
+    const p = assignments[origIdx];
+    if (p === null || p === undefined) return;         // not assigned to main player
+    if (_buyoutSet.has(origIdx)) return;               // bought out — skip entirely
+    const loc = effLoc(origIdx);
+    if (!loc) return;
+    playerData[p].items.push({ type: t, page: loc.page, slot: loc.slot,
+      originalPage: loc.originalPage, originalSlot: loc.originalSlot, globalIdx: origIdx });
+    playerData[p].totals[t]++;
+  });
+
+  // Rebuild fillinData
+  const fillinData = {};
+  for (let p = 0; p < cfg.fillin; p++)
+    fillinData[p] = { items: [], totals: { album:0, frag:0, wf:0, bf:0 } };
+  items.forEach((t, origIdx) => {
+    const fp = fillinAssign ? fillinAssign[origIdx] : undefined;
+    if (fp === null || fp === undefined) return;
+    if (_buyoutSet.has(origIdx)) return;
+    const loc = effLoc(origIdx);
+    if (!loc) return;
+    fillinData[fp].items.push({ type: t, page: loc.page, slot: loc.slot,
+      originalPage: loc.originalPage, originalSlot: loc.originalSlot, globalIdx: origIdx });
+    fillinData[fp].totals[t]++;
+  });
+
+  return { playerData, fillinData };
+}
+
+window.toggleBuyout = async function(globalIdx) {
+  globalIdx = Number(globalIdx);
+  if (_buyoutSet.has(globalIdx)) {
+    _buyoutSet.delete(globalIdx);
+  } else {
+    _buyoutSet.add(globalIdx);
+  }
+  await saveBuyouts();
+  renderBuyoutGrid();
+  // Re-render admin tables so By Player / By Page views update too
+  const saved = window._cachedAssignments;
+  if (saved) renderAdminTables(saved);
+  // Re-render player search result if currently shown
+  const raw = document.getElementById('player-search-input').value.trim().toUpperCase();
+  if (raw) window.doSearch();
+};
+
+function renderBuyoutGrid() {
+  const items = window._lastItems;
+  if (!items) return;
+  const grid  = document.getElementById('buyout-grid');
+  const badge = document.getElementById('buyout-count-badge');
+  if (!grid) return;
+
+  const TYPE_SHORT = { album:'Album', frag:'Frag', wf:'W.Feather', bf:'B.Feather' };
+  const TYPE_COLOR = { album:'var(--album)', frag:'var(--fragment)', wf:'var(--white-f)', bf:'var(--black-f)' };
+
+  grid.innerHTML = items.map((t, idx) => {
+    const loc    = itemLocation(idx);   // original page/slot (for the label)
+    const bought = _buyoutSet.has(idx);
+    return `<button class="buyout-slot-btn${bought ? ' bought-out' : ''}" onclick="toggleBuyout(${idx})"
+      title="${bought ? 'Click to restore' : 'Click to mark as bought out'}">
+      <span class="slot-loc">P${loc.page}·S${loc.slot}</span>
+      <span class="slot-type" style="color:${bought ? 'var(--red)' : TYPE_COLOR[t]}">${TYPE_SHORT[t]}</span>
+      ${bought ? '<span style="font-size:9px;color:var(--red)">BOUGHT OUT</span>' : ''}
+    </button>`;
+  }).join('');
+
+  const count = _buyoutSet.size;
+  badge.textContent = count === 0 ? 'none bought out' : `${count} bought out`;
+  document.getElementById('buyout-section').style.display = 'block';
+}
+
+
 
 // expose globals so non-module onclick="" handlers can reach them
 window._db         = db;
@@ -1432,13 +1685,13 @@ function itemLocation(globalIdx) {
 // ─────────────────────────────────────────────
 //  Player search
 // ─────────────────────────────────────────────
-window.doSearch = function() {
+window.doSearch = async function() {
+  await loadBuyouts();
   const raw = document.getElementById('player-search-input').value.trim().toUpperCase();
   const container = document.getElementById('player-result');
 
   if (!raw) { container.innerHTML = ''; container.style.display='none'; return; }
 
-  // Use realtime-cached assignments
   const saved = window._cachedAssignments;
   if (!saved) {
     container.style.display = 'block';
@@ -1449,7 +1702,7 @@ window.doSearch = function() {
     return;
   }
 
-  const { playerData, fillinData, cfg } = saved;
+  const { cfg } = saved;
 
   // Parse input: P# or F#
   let isFillin = false; let idx = -1;
@@ -1463,14 +1716,29 @@ window.doSearch = function() {
     return;
   }
 
-  const data    = isFillin ? fillinData : playerData;
-  const maxIdx  = isFillin ? cfg.fillin : cfg.players;
-  const label   = isFillin ? 'F' : 'P';
-  const pd      = data[idx];
+  const maxIdx = isFillin ? cfg.fillin : cfg.players;
+  const label  = isFillin ? 'F' : 'P';
 
-  if (idx < 0 || idx >= maxIdx || !pd) {
+  if (idx < 0 || idx >= maxIdx) {
     container.style.display = 'block';
     container.innerHTML = `<div class="not-found-card">⚠ ${raw} not found. Valid range: ${label}1–${label}${maxIdx}.</div>`;
+    return;
+  }
+
+  // Use effective data (buyouts already applied)
+  const effData = buildEffectiveData();
+  if (!effData) {
+    container.style.display = 'block';
+    container.innerHTML = `<div class="not-found-card">⚠ Could not compute assignments. Please regenerate.</div>`;
+    return;
+  }
+
+  const data = isFillin ? effData.fillinData : effData.playerData;
+  const pd   = data[idx];
+
+  if (!pd) {
+    container.style.display = 'block';
+    container.innerHTML = `<div class="not-found-card">⚠ ${raw} not found.</div>`;
     return;
   }
 
@@ -1480,7 +1748,7 @@ window.doSearch = function() {
     ? `<span class="result-role-badge badge-fillin">Fill-in Player</span>`
     : `<span class="result-role-badge badge-main">Main Player</span>`;
 
-  // Group items by page
+  // Group items by effective page
   const byPage = {};
   for (const item of pd.items) {
     if (!byPage[item.page]) byPage[item.page] = [];
@@ -1489,14 +1757,16 @@ window.doSearch = function() {
   const sortedPages = Object.keys(byPage).map(Number).sort((a,b)=>a-b);
 
   let bidRowsHtml = '';
+  const hasBuyouts = _buyoutSet.size > 0;
+
   if (pd.items.length === 0) {
-    bidRowsHtml = `<div class="result-no-items">No items assigned to this player.</div>`;
+    bidRowsHtml = `<div class="result-no-items">No items assigned to this player${hasBuyouts ? ' (some items may have been bought out by others)' : ''}.</div>`;
   } else {
     bidRowsHtml = '<div class="bid-rows">';
     for (const pg of sortedPages) {
       const pageItems = byPage[pg].sort((a,b) => a.slot - b.slot);
-      const slotNums = pageItems.map(i => i.slot).join(',');
-      const tagsHtml = pageItems.map(i =>
+      const slotNums  = pageItems.map(i => `S${i.slot}`).join(', ');
+      const tagsHtml  = pageItems.map(i =>
         `<span class="item-tag ${TYPE_TAG[i.type]}">${TYPE_LABEL[i.type]}</span>`
       ).join('');
       const pgGold = pageItems.reduce((s,i) => s + TYPE_PRICE[i.type], 0);
@@ -1508,10 +1778,16 @@ window.doSearch = function() {
         <div class="bid-gold"><span class="gold-coin"></span> ${pgGold.toLocaleString()}</div>
       </div>`;
     }
+    if (hasBuyouts) {
+      bidRowsHtml += `<div class="adjusted-slot-note">
+        ⚠️ Slot numbers already account for items bought out earlier in the list.
+        These are your <strong>actual in-game positions</strong>.
+      </div>`;
+    }
     bidRowsHtml += '</div>';
   }
 
-  // Totals chips
+  // Totals chips (from effective data)
   let totChips = '';
   for (const t of TYPES) {
     if (pd.totals[t] > 0)
@@ -1538,7 +1814,7 @@ window.doSearch = function() {
         </div>
       </div>
     </div>`;
-}
+};
 
 // ─────────────────────────────────────────────
 //  Generate & save  (Firestore-backed)
@@ -1547,6 +1823,7 @@ window.generate = async function() {
   const cfg  = getConfig();
   const warn = document.getElementById('warning');
   warn.style.display = 'none';
+  await loadBuyouts();
 
   const items      = buildItemList(cfg.totals);
   const totalItems = items.length;
@@ -1634,7 +1911,8 @@ window.generate = async function() {
   renderAdminTables(saveData);
 };
 
-function renderSavedAssignments(saved) {
+async function renderSavedAssignments(saved) {
+  await loadBuyouts();
   const { playerData, fillinData, cfg, items, assignments, fillinAssign } = saved;
   window._lastPlayerData   = playerData;
   window._lastFillinData   = fillinData;
@@ -1645,7 +1923,12 @@ function renderSavedAssignments(saved) {
   renderAdminTables(saved);
 }
 
-function renderAdminTables({ playerData, fillinData, cfg, items, assignments, fillinAssign }) {
+function renderAdminTables({ playerData: _pd, fillinData: _fd, cfg, items, assignments, fillinAssign }) {
+  // Re-derive player/fillin data applying current buyout set
+  const effResult = buildEffectiveData();
+  const playerData = effResult ? effResult.playerData : _pd;
+  const fillinData = effResult ? effResult.fillinData : _fd;
+
   const totalItems = items.length;
   const totalPages = Math.ceil(totalItems / 4);
   const overflowCount = assignments.filter(a => a === null).length;
@@ -1718,6 +2001,7 @@ function renderAdminTables({ playerData, fillinData, cfg, items, assignments, fi
   res.classList.remove('animate-in');
   void res.offsetWidth;
   res.classList.add('animate-in');
+  renderBuyoutGrid();
 }
 
 function buildPlayerRows(playerData, numPlayers, label, cssClass, tbody) {
@@ -1740,8 +2024,12 @@ function buildPlayerRows(playerData, numPlayers, label, cssClass, tbody) {
         const slotStr   = pageItems.map(i => `S${i.slot}`).join(', ');
         const tagsHtml  = pageItems.map(i =>
           `<span class="item-tag ${TYPE_TAG[i.type]}">${TYPE_LABEL[i.type]}</span>`).join('');
+        // Show shift note if original page/slot differs from effective
+        const shiftNote = (pageItems.some(i => i.originalPage && (i.originalPage !== i.page || i.originalSlot !== i.slot)))
+          ? `<span style="font-size:9px;color:var(--muted);margin-left:4px;">(orig P${pageItems[0].originalPage}·S${pageItems.map(i=>i.originalSlot).join(',')})</span>`
+          : '';
         assignHtml += `<div class="assignment-item">
-          <span class="page-badge">Page ${pg} · ${slotStr}</span>${tagsHtml}</div>`;
+          <span class="page-badge">Page ${pg} · ${slotStr}</span>${tagsHtml}${shiftNote}</div>`;
       }
     }
     assignHtml += '</div>';
