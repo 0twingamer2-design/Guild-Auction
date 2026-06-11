@@ -1812,6 +1812,16 @@ window.doSearch = async function() {
     return;
   }
 
+  // Hydrate window globals from saved data if not already set (e.g. public/non-admin view)
+  if (!window._lastItems && saved.items) {
+    window._lastItems        = saved.items;
+    window._lastAssignments  = saved.assignments;
+    window._lastFillinAssign = saved.fillinAssign;
+    window._lastCfg          = saved.cfg;
+    window._lastPlayerData   = saved.playerData;
+    window._lastFillinData   = saved.fillinData;
+  }
+
   // Use effective data (buyouts already applied)
   const effData = buildEffectiveData();
   if (!effData) {
