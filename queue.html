@@ -1146,7 +1146,7 @@ function renderStats() {
   document.getElementById('stat-total').textContent     = total;
   document.getElementById('stat-done').textContent      = done;
   document.getElementById('stat-remaining').textContent = rem;
-  document.getElementById('stat-next').textContent      = next ? `#${next.queueNum} ${next.name}` : '—';
+  document.getElementById('stat-next').textContent      = next ? `P${next.queueNum} ${next.name}` : '—';
   const pct = total ? Math.round(done / total * 100) : 0;
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-pct').textContent  = pct + '%';
@@ -1222,7 +1222,7 @@ window.setQueueNum = function(uid, val) {
   m.queueNum = isNaN(num) || val === '' ? null : num;
   saveQueue();
   renderAll();
-  toast(m.queueNum != null ? `✓ ${m.name} → #${m.queueNum}` : `✓ ${m.name} queue # cleared`, 'success');
+  toast(m.queueNum != null ? `✓ ${m.name} → P${m.queueNum}` : `✓ ${m.name} queue # cleared`, 'success');
 };
 
 window.toggleDone = function(uid, checked) {
@@ -1395,7 +1395,7 @@ window.doMemberSearch = function() {
     <div class="mr-card">
       <div class="mr-card-header">
         <div>
-          <div class="mr-queue-num">${m.queueNum != null ? '#' + m.queueNum : '—'}</div>
+          <div class="mr-queue-num">${m.queueNum != null ? 'P' + m.queueNum : '—'}</div>
         </div>
         <div>
           <div class="mr-name">${esc(m.name)}</div>
@@ -1448,8 +1448,8 @@ function renderTodayBanner() {
   const hl = queue.filter(m => m.highlighted).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
   if (hl.length === 0) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
-  chips.innerHTML = hl.map(m =>
-    `<div class="tb-chip${m.done ? ' done' : ''}">${m.done ? '✓' : '⭐'} #${m.queueNum ?? '?'} ${esc(m.name)}</div>`
+  chips.innerHTML = hl.map((m, i) =>
+    `<div class="tb-chip${m.done ? ' done' : ''}">${m.done ? '✓' : '⭐'} P${i + 1} ${esc(m.name)}</div>`
   ).join('');
 }
 
