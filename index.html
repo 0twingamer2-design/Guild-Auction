@@ -1144,46 +1144,30 @@
     letter-spacing: 1px;
   }
 
-  /* === Today's Participants Banner === */
+  /* === Today's Participants Banner (styled to match queue.html) === */
   #today-participants-banner {
     display: none;
-    margin-bottom: 28px;
-    background: linear-gradient(135deg, rgba(200,149,42,0.07) 0%, var(--bg2) 60%);
-    border: 1px solid rgba(200,149,42,0.35);
-    border-radius: 10px;
-    padding: 16px 20px;
-    animation: fadeIn .3s ease;
+    background: linear-gradient(135deg, rgba(200,149,42,0.12), rgba(245,200,66,0.06));
+    border: 1px solid rgba(245,200,66,0.35);
+    border-radius: 10px; padding: 18px 22px; margin-bottom: 28px;
+    animation: fadeIn .35s ease;
   }
   .tp-label {
-    font-family: 'Playfair Display', serif;
-    font-size: 15px;
-    letter-spacing: 3px;
-    color: var(--gold);
-    text-transform: uppercase;
-    margin-bottom: 12px;
-    display: flex; align-items: center; gap: 10px;
+    font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
+    color: var(--gold2); margin-bottom: 4px;
   }
-  .tp-label::after { content: ''; flex: 1; height: 1px; background: rgba(200,149,42,0.25); }
+  .tp-sub {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
+    margin-bottom: 14px;
+  }
   .tp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .tp-chip {
+    background: rgba(200,149,42,0.15); border: 1px solid rgba(245,200,66,0.3);
+    color: var(--gold2); font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; padding: 5px 14px; border-radius: 20px;
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(200,149,42,0.1);
-    border: 1px solid rgba(200,149,42,0.3);
-    border-radius: 6px;
-    padding: 6px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    color: var(--gold2);
-    letter-spacing: 1px;
-    white-space: nowrap;
   }
-  .tp-chip.done {
-    background: rgba(61,255,155,0.08);
-    border-color: rgba(61,255,155,0.3);
-    color: var(--green);
-    text-decoration: line-through;
-    opacity: 0.7;
-  }
+  .tp-chip.done { opacity: 0.45; text-decoration: line-through; }
   @media (max-width: 600px) {
     #today-participants-banner { padding: 12px 14px; margin-bottom: 20px; }
     .tp-chip { font-size: 11px; padding: 5px 10px; }
@@ -1235,7 +1219,8 @@
     </div>
     <!-- Today's Participants Banner (live from queue.html highlights) -->
     <div id="today-participants-banner">
-      <div class="tp-label">⭐ Today's Participants</div>
+      <div class="tp-label">⭐ Today's Bidding Participants</div>
+      <div class="tp-sub">If your name is listed below, save your gold — you're bidding today!</div>
       <div class="tp-chips" id="today-participants-chips"></div>
     </div>
 
@@ -2389,8 +2374,8 @@ window.addEventListener('DOMContentLoaded', () => {
       .sort((a, b) => (a.queueNum || 9999) - (b.queueNum || 9999));
     if (highlighted.length === 0) { banner.style.display = 'none'; return; }
     banner.style.display = 'block';
-    chips.innerHTML = highlighted.map(m => {
-      const label = m.queueNum != null ? `P${m.queueNum}` : '—';
+    chips.innerHTML = highlighted.map((m, i) => {
+      const label = `P${i + 1}`;
       const isDone = !!m.done;
       return `<div class="tp-chip${isDone ? ' done' : ''}">${isDone ? '✓' : '⭐'} ${label} ${m.name}</div>`;
     }).join('');
