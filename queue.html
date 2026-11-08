@@ -392,6 +392,18 @@
     font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
     color: var(--gold2); margin-bottom: 4px;
   }
+  #today-banner .tb-date {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin: 6px 0 12px;
+    padding: 8px 18px;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 5vw, 34px); font-weight: 900; letter-spacing: 1px;
+    color: var(--cyan);
+    background: rgba(61,232,232,0.10);
+    border: 1px solid rgba(61,232,232,0.45);
+    border-radius: 10px;
+    text-shadow: 0 0 18px rgba(61,232,232,0.35);
+  }
   #today-banner .tb-sub {
     font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
     margin-bottom: 14px;
@@ -656,6 +668,7 @@
     <!-- Today's Participants Banner -->
     <div id="today-banner">
       <div class="tb-head" id="today-head">⭐ Bidding Participants</div>
+      <div class="tb-date" id="today-date" style="display:none"></div>
       <div class="tb-sub">If your name is listed below, save your gold — you're bidding on this date!</div>
       <div class="tb-chips" id="today-chips"></div>
     </div>
@@ -727,6 +740,7 @@
         </div>
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
+          <button class="btn btn-green" onclick="window.markStarredDone()">✓ Today All Done</button>
           <button class="btn btn-red" onclick="window.openResetModal()">↺ Reset All Done</button>
         </div>
       </div>
@@ -1321,6 +1335,22 @@ window.openClearStarsModal = function() {
     });
 };
 
+// ─── Mark all starred members as done ─────────────────────────────────────────
+window.markStarredDone = function() {
+  const starred = queue.filter(m => m.highlighted);
+  if (starred.length === 0) { toast('No starred members to mark', 'error'); return; }
+  const pending = starred.filter(m => !m.done);
+  if (pending.length === 0) { toast('All starred members are already done', 'error'); return; }
+  askConfirm('Mark Starred as Done?',
+    'This will tick the Done box for <strong>' + pending.length + '</strong> starred member' + (pending.length > 1 ? 's' : '') + '.',
+    'Yes, Mark Done', () => {
+      starred.forEach(m => m.done = true);
+      saveQueue();
+      renderAll();
+      toast(`✓ ${pending.length} starred member${pending.length > 1 ? 's' : ''} marked as done`, 'success');
+    });
+};
+
 // ─── Sort & bid date ──────────────────────────────────────────────────────────
 window.toggleSort = function() {
   sortByNum = !sortByNum;
@@ -1529,7 +1559,9 @@ function renderTodayBanner() {
   if (hl.length === 0) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
   const dateLabel = formatBidDate(bidDate);
-  document.getElementById('today-head').textContent = '⭐ Bidding Participants' + (dateLabel ? ' · ' + dateLabel : '');
+  const dateEl = document.getElementById('today-date');
+  dateEl.style.display = dateLabel ? 'inline-flex' : 'none';
+  dateEl.textContent = dateLabel ? '📅 ' + dateLabel : '';
   chips.innerHTML = hl.map((m, i) =>
     `<div class="tb-chip${m.done ? ' done' : ''}">${m.done ? '✓' : '⭐'} P${i + 1} ${esc(m.name)}</div>`
   ).join('');
