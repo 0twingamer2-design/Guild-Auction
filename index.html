@@ -1156,6 +1156,18 @@
     font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700;
     color: var(--gold2); margin-bottom: 4px;
   }
+  .tp-date {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin: 6px 0 12px;
+    padding: 8px 18px;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 5vw, 34px); font-weight: 900; letter-spacing: 1px;
+    color: var(--cyan);
+    background: rgba(61,232,232,0.10);
+    border: 1px solid rgba(61,232,232,0.45);
+    border-radius: 10px;
+    text-shadow: 0 0 18px rgba(61,232,232,0.35);
+  }
   .tp-sub {
     font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
     margin-bottom: 14px;
@@ -1219,8 +1231,9 @@
     </div>
     <!-- Today's Participants Banner (live from queue.html highlights) -->
     <div id="today-participants-banner">
-      <div class="tp-label">⭐ Today's Bidding Participants</div>
-      <div class="tp-sub">If your name is listed below, save your gold — you're bidding today!</div>
+      <div class="tp-label">⭐ Bidding Participants</div>
+      <div class="tp-date" id="today-participants-date" style="display:none"></div>
+      <div class="tp-sub">If your name is listed below, save your gold — you're bidding on this date!</div>
       <div class="tp-chips" id="today-participants-chips"></div>
     </div>
 
@@ -2374,6 +2387,17 @@ window.addEventListener('DOMContentLoaded', () => {
       .sort((a, b) => (a.queueNum || 9999) - (b.queueNum || 9999));
     if (highlighted.length === 0) { banner.style.display = 'none'; return; }
     banner.style.display = 'block';
+    const dateEl = document.getElementById('today-participants-date');
+    let dateLabel = '';
+    const bd = snap.data().bidDate;
+    if (typeof bd === 'string' && bd) {
+      const [y, mo, d] = bd.split('-').map(Number);
+      if (y && mo && d) dateLabel = new Date(y, mo - 1, d).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    if (dateEl) {
+      dateEl.style.display = dateLabel ? 'inline-flex' : 'none';
+      dateEl.textContent = dateLabel ? '📅 ' + dateLabel : '';
+    }
     chips.innerHTML = highlighted.map((m, i) => {
       const label = `P${i + 1}`;
       const isDone = !!m.done;
