@@ -203,6 +203,19 @@
   .toolbar-group { display: flex; align-items: center; gap: 8px; }
   .toolbar-sep { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
   .toolbar-spacer { flex: 1; }
+  .toolbar-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; white-space: nowrap; }
+  .date-input {
+    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 14px;
+    padding: 9px 12px; border-radius: 6px; outline: none; color-scheme: dark;
+    transition: border-color .2s;
+  }
+  .date-input:focus { border-color: var(--gold); }
+  .btn-sm { padding: 9px 12px; }
+  .sort-toggle.active { background: rgba(245,200,66,0.12); border-color: var(--gold2); color: var(--gold2); }
+  .filter-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .filter-row .filter-tabs { margin-bottom: 0; }
+  .public-view .sort-toggle { display: none !important; }
 
   /* === Stats bar === */
   .stats-bar {
@@ -642,8 +655,8 @@
 
     <!-- Today's Participants Banner -->
     <div id="today-banner">
-      <div class="tb-head">⭐ Today's Bidding Participants</div>
-      <div class="tb-sub">If your name is listed below, save your gold — you're bidding today!</div>
+      <div class="tb-head" id="today-head">⭐ Bidding Participants</div>
+      <div class="tb-sub">If your name is listed below, save your gold — you're bidding on this date!</div>
       <div class="tb-chips" id="today-chips"></div>
     </div>
 
@@ -682,10 +695,6 @@
           <span class="lbl">Remaining</span>
           <span class="val" id="stat-remaining">0</span>
         </div>
-        <div class="stat-chip">
-          <span class="lbl">Next Up</span>
-          <span class="val" id="stat-next" style="font-size:15px;padding-top:4px">—</span>
-        </div>
       </div>
 
       <!-- Progress -->
@@ -708,7 +717,13 @@
         <div class="toolbar-sep"></div>
         <div class="toolbar-group">
           <button class="btn btn-outline" onclick="window.shuffleQueue()" id="shuffle-btn">🎲 Assign Random Order</button>
-          <button class="btn btn-outline" onclick="window.toggleHighlightMode()" id="highlight-mode-btn">⭐ Highlight Today</button>
+          <button class="btn btn-outline" onclick="window.openClearStarsModal()">☆ Clear All Stars</button>
+        </div>
+        <div class="toolbar-sep"></div>
+        <div class="toolbar-group">
+          <label for="bid-date-input" class="toolbar-label">📅 Bid date</label>
+          <input type="date" id="bid-date-input" class="date-input" onchange="window.setBidDate(this.value)" title="Date shown on the bidding participants banner">
+          <button class="btn btn-outline btn-sm" onclick="window.setBidDate('')" title="Clear date">✕</button>
         </div>
         <div class="toolbar-spacer"></div>
         <div class="toolbar-group">
@@ -797,10 +812,13 @@
       </div>
 
       <!-- Filter tabs -->
-      <div class="filter-tabs">
-        <button class="filter-tab active" onclick="window.setFilter('all',this)">All</button>
-        <button class="filter-tab" onclick="window.setFilter('waiting',this)">Waiting</button>
-        <button class="filter-tab" onclick="window.setFilter('done',this)">Done</button>
+      <div class="filter-row">
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="window.setFilter('all',this)">All</button>
+          <button class="filter-tab" onclick="window.setFilter('waiting',this)">Waiting</button>
+          <button class="filter-tab" onclick="window.setFilter('done',this)">Done</button>
+        </div>
+        <button class="filter-tab sort-toggle active" id="sort-toggle-btn" onclick="window.toggleSort()" title="Sort the admin table by queue number">↕ Sort by #</button>
       </div>
 
       <!-- Queue table -->
@@ -834,6 +852,18 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="window.closeResetModal()">Cancel</button>
       <button class="btn btn-red" onclick="window.doReset()">Yes, Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Confirm Modal (shuffle, clear stars) -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="window.closeConfirm()">Cancel</button>
+      <button class="btn btn-red" id="confirm-yes" onclick="window.runConfirm()">Yes</button>
     </div>
   </div>
 </div>
@@ -877,6 +907,8 @@ const SESSION_KEY = 'rooc_admin_user';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let queue  = [];
+let bidDate = '';          // 'YYYY-MM-DD' shown on the participants banner
+let sortByNum = true;      // admin: sort table by queue number
 let filter = 'all';
 let pendingDeleteUid = null;
 let isAdmin = false;
@@ -939,7 +971,7 @@ function getSession() {
 // ─── Firebase queue persistence ───────────────────────────────────────────────
 async function saveQueue() {
   try {
-    await setDoc(REF_QUEUE, { members: queue });
+    await setDoc(REF_QUEUE, { members: queue, bidDate: bidDate || '' });
   } catch(e) {
     console.error('saveQueue failed:', e);
     toast('⚠ Save failed: ' + e.message, 'error');
@@ -957,8 +989,10 @@ onSnapshot(REF_QUEUE, (snap) => {
   if (snap.exists()) {
     const data = snap.data();
     queue = Array.isArray(data.members) ? data.members : [];
+    bidDate = typeof data.bidDate === 'string' ? data.bidDate : '';
   } else {
     queue = [];
+    bidDate = '';
   }
   renderAll();
   if (hint) hint.innerHTML = '<span class="live-dot"></span>Live · Search by UID number or Player ID like P1, P2 · Queue updates in real time';
@@ -1132,6 +1166,8 @@ async function renderAdminUserList() {
 
 // ─── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
+  const di = document.getElementById('bid-date-input');
+  if (di && document.activeElement !== di) di.value = bidDate || '';
   renderStats();
   renderTable();
   renderTodayBanner();
@@ -1141,12 +1177,9 @@ function renderStats() {
   const total = queue.length;
   const done  = queue.filter(m => m.done).length;
   const rem   = total - done;
-  const waiting = queue.filter(m => !m.done).sort((a,b) => (a.queueNum||999) - (b.queueNum||999));
-  const next  = waiting[0];
   document.getElementById('stat-total').textContent     = total;
   document.getElementById('stat-done').textContent      = done;
   document.getElementById('stat-remaining').textContent = rem;
-  document.getElementById('stat-next').textContent      = next ? `P${next.queueNum} ${next.name}` : '—';
   const pct = total ? Math.round(done / total * 100) : 0;
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('progress-pct').textContent  = pct + '%';
@@ -1174,6 +1207,8 @@ function renderTable() {
     const waiting = rows.filter(m => !m.done).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
     const done    = rows.filter(m =>  m.done).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
     rows = [...waiting, ...done];
+  } else if (sortByNum) {
+    rows = [...rows].sort((a,b) => (a.queueNum ?? 1e9) - (b.queueNum ?? 1e9));
   }
 
   const numCell = (m) => {
@@ -1187,7 +1222,7 @@ function renderTable() {
   tbody.innerHTML = rows.map(m => `
     <tr class="${m.done ? 'done-row' : ''}${m.highlighted ? ' hl-row' : ''}" data-uid="${esc(m.uid)}">
       <td class="q-num">${numCell(m)}</td>
-      <td><div class="q-name">${esc(m.name)}${m.highlighted ? '<span class="today-badge">⭐ Today</span>' : ''}</div></td>
+      <td><div class="q-name">${esc(m.name)}${m.highlighted ? '<span class="today-badge">⭐ Bidding</span>' : ''}</div></td>
       <td class="q-uid">${esc(m.uid)}</td>
       <td class="q-uid">${esc(m.role || '—')}</td>
       <td><span class="q-status-pill ${m.done ? 'done' : 'waiting'}">${m.done ? '✓ Done' : 'Waiting'}</span></td>
@@ -1196,7 +1231,7 @@ function renderTable() {
           onchange="window.toggleDone('${esc(m.uid)}', this.checked)" title="Mark as done">
       </td>
       <td class="q-actions">
-        ${isAdmin && !previewingPublic ? `<button class="q-hl-btn${m.highlighted ? ' on' : ''}" onclick="window.toggleHighlight('${esc(m.uid)}')" title="${m.highlighted ? 'Remove from today' : 'Mark for today'}">⭐</button>` : ''}
+        ${isAdmin && !previewingPublic ? `<button class="q-hl-btn${m.highlighted ? ' on' : ''}" onclick="window.toggleHighlight('${esc(m.uid)}')" title="${m.highlighted ? 'Remove star' : 'Mark as bidding'}">⭐</button>` : ''}
         <button class="q-del-btn" onclick="window.openDeleteModal('${esc(m.uid)}', '${esc(m.name)}')" title="Remove">✕</button>
       </td>
     </tr>
@@ -1234,8 +1269,32 @@ window.toggleDone = function(uid, checked) {
   toast(checked ? `✓ ${m.name} marked as done` : `↩ ${m.name} unmarked`, checked ? 'success' : '');
 };
 
+let pendingConfirm = null;
+function askConfirm(title, msg, yesLabel, fn) {
+  pendingConfirm = fn;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').innerHTML = msg;
+  document.getElementById('confirm-yes').textContent = yesLabel;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+window.closeConfirm = function() {
+  pendingConfirm = null;
+  document.getElementById('confirm-modal').classList.remove('open');
+};
+window.runConfirm = function() {
+  const fn = pendingConfirm;
+  window.closeConfirm();
+  if (fn) fn();
+};
+
 window.shuffleQueue = function() {
   if (queue.length === 0) { toast('No members to shuffle', 'error'); return; }
+  askConfirm('Assign Random Order?',
+    'This will shuffle everyone and <strong>overwrite all current queue numbers</strong> (1 to ' + queue.length + ').<br>This cannot be undone.',
+    'Yes, Shuffle', doShuffle);
+};
+
+function doShuffle() {
   const arr = [...queue];
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -1246,6 +1305,44 @@ window.shuffleQueue = function() {
   saveQueue();
   renderAll();
   toast(`🎲 Random order assigned to ${queue.length} members!`, 'success');
+}
+
+// ─── Clear all stars ──────────────────────────────────────────────────────────
+window.openClearStarsModal = function() {
+  const n = queue.filter(m => m.highlighted).length;
+  if (n === 0) { toast('No starred members to clear', 'error'); return; }
+  askConfirm('Clear All Stars?',
+    'This will remove the ⭐ from <strong>' + n + '</strong> member' + (n > 1 ? 's' : '') + ' and hide the bidding participants banner.',
+    'Yes, Clear', () => {
+      queue.forEach(m => m.highlighted = false);
+      saveQueue();
+      renderAll();
+      toast('☆ All stars cleared', 'success');
+    });
+};
+
+// ─── Sort & bid date ──────────────────────────────────────────────────────────
+window.toggleSort = function() {
+  sortByNum = !sortByNum;
+  document.getElementById('sort-toggle-btn').classList.toggle('active', sortByNum);
+  renderTable();
+  toast(sortByNum ? '↕ Sorted by queue number' : 'Showing original list order', '');
+};
+
+function formatBidDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-').map(Number);
+  if (!y || !m || !day) return '';
+  return new Date(y, m - 1, day).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+window.setBidDate = function(val) {
+  bidDate = val || '';
+  const inp = document.getElementById('bid-date-input');
+  if (inp) inp.value = bidDate;
+  saveQueue();
+  renderAll();
+  toast(bidDate ? `📅 Bid date set to ${formatBidDate(bidDate)}` : '📅 Bid date cleared', 'success');
 };
 
 // ─── Import ───────────────────────────────────────────────────────────────────
@@ -1405,7 +1502,7 @@ window.doMemberSearch = function() {
       </div>
       <div class="mr-body">
         <div class="mr-row">Role: <strong>${esc(m.role || '—')}</strong></div>
-        ${m.highlighted && !m.done ? `<div class="mr-row" style="color:var(--gold2)">⭐ You are scheduled to bid <strong>today</strong> — make sure you have enough gold!</div>` : ''}
+        ${m.highlighted && !m.done ? `<div class="mr-row" style="color:var(--gold2)">⭐ You are scheduled to bid <strong>${bidDate ? 'on ' + esc(formatBidDate(bidDate)) : 'in the next auction'}</strong> — make sure you have enough gold!</div>` : ''}
         ${!m.done && posInWaiting >= 0 ? `<div class="mr-row">Position in waiting list: <strong>#${posInWaiting + 1} of ${waitingList.length} remaining</strong></div>` : ''}
         ${m.done ? `<div class="mr-row" style="color:var(--green)">✓ You have already completed your auction turn this round.</div>` : ''}
       </div>
@@ -1421,24 +1518,7 @@ window.toggleHighlight = function(uid) {
   saveQueue();
   renderAll();
   const n = queue.filter(x => x.highlighted).length;
-  toast(m.highlighted ? `⭐ ${m.name} added to today's list (${n} total)` : `${m.name} removed from today's list`, m.highlighted ? 'success' : '');
-};
-
-window.toggleHighlightMode = function() {
-  const btn = document.getElementById('highlight-mode-btn');
-  const active = btn.dataset.active === '1';
-  if (!active) {
-    btn.dataset.active = '1';
-    btn.style.background = 'rgba(200,149,42,0.15)';
-    btn.style.borderColor = 'rgba(245,200,66,0.5)';
-    btn.style.color = 'var(--gold2)';
-    toast('Click ⭐ on any row to mark them as today\'s participant', '');
-  } else {
-    btn.dataset.active = '0';
-    btn.style.background = '';
-    btn.style.borderColor = '';
-    btn.style.color = '';
-  }
+  toast(m.highlighted ? `⭐ ${m.name} added to bidding list (${n} total)` : `${m.name} removed from bidding list`, m.highlighted ? 'success' : '');
 };
 
 function renderTodayBanner() {
@@ -1448,6 +1528,8 @@ function renderTodayBanner() {
   const hl = queue.filter(m => m.highlighted).sort((a,b) => (a.queueNum||9999) - (b.queueNum||9999));
   if (hl.length === 0) { banner.style.display = 'none'; return; }
   banner.style.display = 'block';
+  const dateLabel = formatBidDate(bidDate);
+  document.getElementById('today-head').textContent = '⭐ Bidding Participants' + (dateLabel ? ' · ' + dateLabel : '');
   chips.innerHTML = hl.map((m, i) =>
     `<div class="tb-chip${m.done ? ' done' : ''}">${m.done ? '✓' : '⭐'} P${i + 1} ${esc(m.name)}</div>`
   ).join('');
@@ -1465,6 +1547,7 @@ function toast(msg, type='') {
 
 // ─── Modal overlay close on bg click ─────────────────────────────────────────
 document.getElementById('reset-modal').addEventListener('click',  e => { if (e.target === e.currentTarget) window.closeResetModal(); });
+document.getElementById('confirm-modal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeConfirm(); });
 document.getElementById('delete-modal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeDeleteModal(); });
 document.getElementById('admin-login-modal').addEventListener('click', e => { if (e.target === e.currentTarget) window.closeAdminLogin(); });
 
